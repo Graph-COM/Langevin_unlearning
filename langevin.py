@@ -18,9 +18,9 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
         u = potential(wi, X, y, lam)
         grad = torch.autograd.grad(u, wi)[0]
         # clip the grad to norm = 1
-        grad_norm = torch.norm(grad)
+        '''grad_norm = torch.norm(grad)
         if grad_norm > M:
-            grad = grad / grad_norm
+            grad = grad / grad_norm'''
         wi = wi.detach() - step * grad + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w).to(device)
         samples.append(wi.detach().cpu().numpy())
     #return samples

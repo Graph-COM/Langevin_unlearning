@@ -85,7 +85,7 @@ class Runner():
                 # list for MNIST
                 sigma_list = [0.05, 0.1, 0.2]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000]
-            self.search_burnin(sigma_list, burn_in_list)
+            _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_burnin_newdata:
             if self.args.dataset == '2dgaussian':
                 # list for 2d gaussian
@@ -95,15 +95,49 @@ class Runner():
                 # list for MNIST
                 num_remove_list = [1, 5, 10, 50, 100, 200, 500, 1000]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000]
-            self.search_burnin_newdata(num_remove_list, burn_in_list)
+            _ = self.search_burnin_newdata(num_remove_list, burn_in_list)
+        elif self.args.paint_utility_s:
+            num_remove_list = [1, 5, 10, 50, 100, 200, 500, 1000]
+            scratch_acc_list = []
+            unlearn_acc_list = []
+            avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            scratch_acc_list.append(avg_accuracy_scratch_D)
+            unlearn_acc_list.append(avg_accuracy_scratch_D)
+            # calculate K
+            epsilon_list = [1] # set epsilon = 1
+            K_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_list = []
+            for num_remove in num_remove_list:
+                X_train_removed, y_train_removed = self.get_removed_data(num_remove)
+                avg_accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None)
+                scratch_acc_list.append(avg_accuracy_scratch_Dnew)
+                avg_accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][1], self.args.sigma, w_list)
+                unlearn_acc_list.append(avg_accuracy_finetune)
+                K_list.append(K_dict[num_remove][1])
+            x_list = [0] + num_remove_list
+            plt.plot(x_list, scratch_acc_list, label='learn from scratch')
+            plt.plot(x_list, unlearn_acc_list, label='unlearn')
+            plt.legend()
+            for i, k in enumerate(K_list):
+                plt.text(x_list[i], K_list[i], f'K = {k}', fontsize=8)
+            plt.xlabel('# removed data')
+            plt.ylabel('test accuracy')
+            plt.savefig('./paint_utility_s.pdf')
+            plt.clf()
+            import pdb; pdb.set_trace()
+            
+
         else:
             # given a single burn-in, temperature, sample from scratch on D:
-            #avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-            #print('the avg accuracy on original D from scratch is:'+str(avg_accuracy_scratch_D))
-            #print('the average time cost: '+str(mean_time))
+            avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            print('the avg accuracy on original D from scratch is:'+str(avg_accuracy_scratch_D))
+            print('the average time cost: '+str(mean_time))
+            
             epsilon_list = [0.1, 0.5, 1, 2, 5]
             num_remove_list = [1, 2, 5, 10, 50, 100, 200, 500, 1000]
-            K_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_dict = self.search_finetune_step(epsilon_list, num_remove_list) # K[num_remove][target_epsilon]
+            
+            import pdb; pdb.set_trace()
             if self.args.search_finetune:
                 if self.args.dataset == '2dgaussian':
                     # list for 2d gaussian
@@ -150,7 +184,7 @@ class Runner():
         C_lsi = 2 * self.args.sigma**2 / self.m
         K_dict = {}
         for num_remove in num_remove_list:
-            K_list = []
+            K_list = {}
             for target_epsilon in epsilon_list:
                 K = 1
                 epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
@@ -159,9 +193,10 @@ class Runner():
                     K = K + 10
                     epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                     min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
-                K_list.append(K)
+                K_list[target_epsilon] = K
                 print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
             K_dict[num_remove] = K_list
+        return K_dict
     def get_mean_performance(self, X, y, step, sigma, w_list, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
         trial_list = []
@@ -223,6 +258,7 @@ class Runner():
         plt.clf()
                 
     def search_burnin(self, sigma_list, burn_in_list, fig_path = '_search_burnin.jpg'):
+        acc_dict = {}
         for sigma in sigma_list:
             acc_list = []
             this_w_list = None
@@ -236,6 +272,7 @@ class Runner():
                 acc_list.append(avg_accuracy)
                 print(acc_list)
             plt.plot(burn_in_list, acc_list, label='sigma :'+str(sigma))
+            acc_dict[sigma] = acc_list
             for i in range(len(burn_in_list)):
                 plt.text(burn_in_list[i], acc_list[i], f'{acc_list[i]:.3f}', ha='right', va='bottom')
         plt.legend()
@@ -244,8 +281,10 @@ class Runner():
         plt.ylabel('accuracy')
         plt.savefig(str(self.args.dataset)+fig_path)
         plt.clf()
+        return acc_dict
     
     def search_burnin_newdata(self, num_remove_list, burn_in_list, fig_path = '_search_burnin_on_Dnew.jpg'):
+        acc_dict = {}
         for num_remove in num_remove_list:
             acc_list = []
             this_w_list = None
@@ -260,6 +299,7 @@ class Runner():
                 acc_list.append(avg_accuracy)
                 print(acc_list)
             plt.plot(burn_in_list, acc_list, label='num_remove: '+str(num_remove))
+            acc_dict[num_remove] = acc_list
             for i in range(len(burn_in_list)):
                 plt.text(burn_in_list[i], acc_list[i], f'{acc_list[i]:.3f}', ha='right', va='bottom')
         plt.legend()
@@ -267,7 +307,8 @@ class Runner():
         plt.xlabel('burn in steps')
         plt.ylabel('accuracy')
         plt.savefig(str(self.args.dataset)+fig_path)
-        plt.clf()    
+        plt.clf()
+        return acc_dict 
     def test_accuracy(self, w_list):
         w = torch.tensor(w_list[0])
         # test accuracy (before removal)
@@ -294,7 +335,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 5000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
     #parser.add_argument('--step_size', type = float, default = 0.1, help = 'the step size of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
@@ -302,6 +343,7 @@ def main():
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
     parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
+    parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
     args = parser.parse_args()
     print(args)
 

@@ -4,7 +4,7 @@
 
 # search burn in on new data
 #nohup python -u main.py --step_size 0.1 --search_burnin_newdata 1 --lam 1e-6 --dataset 2dgaussian --temp 5 >./search_burnin_newdata_2dgaussian.log 2>&1 </dev/null &
-nohup python -u main.py --search_burnin_newdata 1 --lam 1e-6 --dataset MNIST --sigma 0.1 --gpu 7 >./search_burnin_newdata_MNIST.log 2>&1 </dev/null &
+#nohup python -u main.py --search_burnin_newdata 1 --lam 1e-6 --dataset MNIST --sigma 0.1 --gpu 7 >./search_burnin_newdata_MNIST.log 2>&1 </dev/null &
 
 # search fine-tune
 #nohup python -u main.py --step_size 0.1 --search_finetune 1 --lam 1e-6 --dataset 2dgaussian --burn_in 500 --temp 5 >./search_finetune_2dgaussian.log 2>&1 </dev/null &
@@ -13,3 +13,7 @@ nohup python -u main.py --search_burnin_newdata 1 --lam 1e-6 --dataset MNIST --s
 # after searching, run the code to get results
 #nohup python -u main.py --step_size 0.1 --lam 1e-6 --dataset 2dgaussian --burn_in 500 --temp 5 --finetune_step 200 --num-removes 3000 --gpu 7 >./2dgaussian.log 2>&1 </dev/null &
 #nohup python -u main.py --step_size 0.1 --lam 1e-8 --dataset MNIST --burn_in 3000 --temp 100 --finetune_step 200 --num-removes 4000 >./MNIST.log 2>&1 </dev/null &
+
+# paint utility - s figure
+
+nohup python -u main.py --lam 1e-6 --dataset MNIST --paint_utility_s 1 >./MNIST_paint_utility_s.log 2>&1 </dev/null &
