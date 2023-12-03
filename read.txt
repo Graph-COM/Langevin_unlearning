@@ -1,0 +1,3 @@
+main_old is original bad code
+main_v1 is empirical version
+Main tries to add some theory
