@@ -1,0 +1,1 @@
+nohup python -u baseline.py --lam 1e-6 --dataset MNIST --gpu 7 >./baseline.log 2>&1 </dev/null &

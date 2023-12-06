@@ -84,7 +84,7 @@ class Runner():
             elif self.args.dataset == 'MNIST':
                 # list for MNIST
                 sigma_list = [0.05, 0.1, 0.2]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 25000, 30000]
             _ = self.search_burnin(sigma_list, burn_in_list)
         elif self.args.search_burnin_newdata:
             if self.args.dataset == '2dgaussian':
@@ -97,15 +97,16 @@ class Runner():
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000]
             _ = self.search_burnin_newdata(num_remove_list, burn_in_list)
         elif self.args.paint_utility_s:
-            num_remove_list = [1, 5, 10, 50, 100, 200, 500, 1000]
+            num_remove_list = [1, 10, 50, 100, 500, 1000]
             scratch_acc_list = []
             unlearn_acc_list = []
             avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            np.save('./paint_utility_s/learn_scratch_w.npy', w_list)
             scratch_acc_list.append(avg_accuracy_scratch_D)
             unlearn_acc_list.append(avg_accuracy_scratch_D)
             # calculate K
             epsilon_list = [1] # set epsilon = 1
-            K_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
             K_list = []
             for num_remove in num_remove_list:
                 X_train_removed, y_train_removed = self.get_removed_data(num_remove)
@@ -115,23 +116,117 @@ class Runner():
                 unlearn_acc_list.append(avg_accuracy_finetune)
                 K_list.append(K_dict[num_remove][1])
             x_list = [0] + num_remove_list
-            plt.plot(x_list, scratch_acc_list, label='learn from scratch')
-            plt.plot(x_list, unlearn_acc_list, label='unlearn')
+            np.save('./paint_utility_s/learn_scratch_acc.npy', scratch_acc_list)
+            np.save('./paint_utility_s/unlearn_scratch_acc.npy', unlearn_acc_list)
+            np.save('./paint_utility_s/k_list.npy', K_list)
+            plt.plot(x_list, scratch_acc_list, label='learn from scratch', marker = 'o')
+            plt.plot(x_list, unlearn_acc_list, label='unlearn', marker = 'o')
             plt.legend()
             for i, k in enumerate(K_list):
-                plt.text(x_list[i], K_list[i], f'K = {k}', fontsize=8)
+                plt.text(x_list[i+1], unlearn_acc_list[i+1], f'K = {k}', fontsize=8)
             plt.xlabel('# removed data')
             plt.ylabel('test accuracy')
             plt.savefig('./paint_utility_s.pdf')
             plt.clf()
-            import pdb; pdb.set_trace()
-            
+        elif self.args.paint_utility_epsilon:
+            epsilon_list = [0.1, 0.5, 1, 2, 5]
+            num_remove_list = [1000]
+            unlearn_acc_list = []
+            avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            np.save('./paint_utility_epsilon/w_from_scratch.npy', w_list)
+            unlearn_acc_list.append(avg_accuracy_scratch_D)
+            # calculate K
+            K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
+            np.save('./paint_utility_epsilon/K_list.npy', K_dict)
+            K_list = []
+            for epsilon in epsilon_list:
+                X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
+                avg_accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][epsilon], self.args.sigma, w_list)
+                unlearn_acc_list.append(avg_accuracy_finetune)
+                K_list.append(K_dict[num_remove_list[0]][epsilon])
+            np.save('./paint_utility_epsilon/unlearn_acc_list.npy', unlearn_acc_list)
+            x_list = [0] + epsilon_list
+            plt.plot(x_list, unlearn_acc_list, label='unlearn', marker = 'o')
+            plt.legend()
+            for i, k in enumerate(K_list):
+                plt.text(x_list[i+1], unlearn_acc_list[i+1], f'K = {k}', fontsize=8)
+            plt.xlabel('epsilon')
+            plt.ylabel('test accuracy')
+            plt.savefig('./paint_utility_epsilon.pdf')
+            plt.clf()
+        elif self.args.paint_utility_sigma:
+            num_remove_list = [1000]
+            epsilon_list = [1]
+            _, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
+            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            scratch_acc_list = []
+            epsilon0_list = []
+            for sigma in sigma_list:
+                epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
+                epsilon0_list.append(epsilon0)
+                avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, sigma, None, len_list = 1, return_w = True)
+                scratch_acc_list.append(avg_accuracy_scratch_D)
+            fig, ax1 = plt.subplots()
+            ax1.plot(sigma_list, epsilon0_list, 'g-')  
+            ax1.set_xlabel('sigma')
+            ax1.set_ylabel('epsilon 0', color='g')  
+            ax1.tick_params(axis='y', labelcolor='g')  
+            ax2 = ax1.twinx() 
+            ax2.plot(sigma_list, scratch_acc_list, 'b-')
+            ax2.set_ylabel('test accuracy', color='b')
+            ax2.tick_params(axis='y', labelcolor='b')
+            plt.legend()
+            plt.savefig('paint_utility_sigma.pdf')
+            plt.clf()
+        elif self.args.paint_unlearning_sigma:
+            num_remove_list = [1000]
+            epsilon_list = [1]
+            K_dict, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            np.save('./paint_utility_sigma/K_dict.npy', K_dict)
+            alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
+            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            scratch_acc_list = []
+            scratch_unlearn_list = []
+            finetune_unlearn_list = []
+            epsilon0_list = []
+            X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
+            for sigma in sigma_list:
+                epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
+                epsilon0_list.append(epsilon0)
+                avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, sigma, None, len_list = 1, return_w = True)
+                np.save('./paint_utility_sigma/'+str(sigma)+'_learn_scratch_w.npy', w_list)
+                scratch_acc_list.append(avg_accuracy_scratch_D)
+                avg_accuracy_scratch_Dnew, mean_time, unlearn_w_list = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, sigma, None, return_w=True)
+                np.save('./paint_utility_sigma/'+str(sigma)+'_unlearn_scratch_w.npy', unlearn_w_list)
+                scratch_unlearn_list.append(avg_accuracy_scratch_Dnew)
+                avg_accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
+                finetune_unlearn_list.append(avg_accuracy_finetune)
+            fig, ax1 = plt.subplots()
+            np.save('./paint_utility_sigma/epsilon0.npy', epsilon0_list)
+            ax1.plot(sigma_list, epsilon0_list, label = 'epsilon 0', marker = 'o')  
+            ax1.set_xlabel('sigma')
+            ax1.set_ylabel('epsilon 0')  
+            ax1.tick_params(axis='y')  
+            ax2 = ax1.twinx() 
+            ax2.plot(sigma_list, scratch_acc_list, label = 'learn D', marker = 'o')
+            ax2.plot(sigma_list, scratch_unlearn_list, label = 'learn D\'', marker = 'o')
+            ax2.plot(sigma_list, finetune_unlearn_list, label = 'unlearn D\'', marker = 'o')
+            np.save('./paint_utility_sigma/learn_scratch_acc.npy', scratch_acc_list)
+            np.save('./paint_utility_sigma/unlearn_scratch_acc.npy', scratch_unlearn_list)
+            np.save('./paint_utility_sigma/unlearn_finetune_acc.npy', finetune_unlearn_list)
+            ax2.set_ylabel('test accuracy')
+            ax2.tick_params(axis='y')
+            ax1.legend()
+            ax2.legend()
+            plt.savefig('paint_utility_sigma_unlearning2.pdf')
+            plt.clf()
 
         else:
             # given a single burn-in, temperature, sample from scratch on D:
-            avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-            print('the avg accuracy on original D from scratch is:'+str(avg_accuracy_scratch_D))
-            print('the average time cost: '+str(mean_time))
+            #avg_accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            #print('the avg accuracy on original D from scratch is:'+str(avg_accuracy_scratch_D))
+            #print('the average time cost: '+str(mean_time))
             
             epsilon_list = [0.1, 0.5, 1, 2, 5]
             num_remove_list = [1, 2, 5, 10, 50, 100, 200, 500, 1000]
@@ -180,11 +275,14 @@ class Runner():
         part_3 = (math.log(1 / float(delta))) / (alpha - 1)
         epsilon = part_1 * part_2 + part_3
         return epsilon
+    
     def search_finetune_step(self, epsilon_list, num_remove_list):
         C_lsi = 2 * self.args.sigma**2 / self.m
         K_dict = {}
+        alpha_dict = {}
         for num_remove in num_remove_list:
             K_list = {}
+            alpha_list = {}
             for target_epsilon in epsilon_list:
                 K = 1
                 epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
@@ -194,9 +292,14 @@ class Runner():
                     epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                     min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
                 K_list[target_epsilon] = K
+                alpha_list[target_epsilon] = min_epsilon_with_k.x
                 print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
             K_dict[num_remove] = K_list
-        return K_dict
+            alpha_dict[num_remove] = alpha_list
+        return K_dict, alpha_dict
+    def calculate_epsilon0(self, alpha, S, sigma):
+        return (4 * alpha * float(S)**2 * float(self.M)**2) / (float(self.m) * float(sigma)**2 * float(self.n)**2)
+
     def get_mean_performance(self, X, y, step, sigma, w_list, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
         trial_list = []
@@ -257,7 +360,7 @@ class Runner():
         plt.savefig(str(self.args.dataset)+fig_path)
         plt.clf()
                 
-    def search_burnin(self, sigma_list, burn_in_list, fig_path = '_search_burnin.jpg'):
+    def search_burnin(self, sigma_list, burn_in_list, fig_path = '_search_burnin.pdf'):
         acc_dict = {}
         for sigma in sigma_list:
             acc_list = []
@@ -335,8 +438,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
-    #parser.add_argument('--step_size', type = float, default = 0.1, help = 'the step size of LMC')
+    parser.add_argument('--burn_in', type = int, default = 35000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')
@@ -344,6 +446,9 @@ def main():
     parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
+    parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
+    parser.add_argument('--paint_utility_sigma', type = int, default = 0, help = 'paint utility - sigma figure')
+    parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     args = parser.parse_args()
     print(args)
 
