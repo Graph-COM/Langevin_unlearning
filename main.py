@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
 from scipy.optimize import minimize_scalar
+import sympy as sp
+import re
 
 import torch
 import torch.nn as nn
@@ -221,6 +223,26 @@ class Runner():
             ax2.legend()
             plt.savefig('paint_utility_sigma_unlearning2.pdf')
             plt.clf()
+        elif self.args.compare_k == 1:
+            epsilon_list = [0.1, 0.5, 1, 2, 5]
+            num_remove_list = [1000]
+            K_dict, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_sgd_dict = self.search_sgd_step(epsilon_list, alpha_dict)
+            for key in K_dict.keys():
+                tmp_K_dict = K_dict[key]
+                tmp_K_sgd_dict = K_sgd_dict[key]
+                K_list = []
+                K_sgd_list = []
+                for target_epsilon in epsilon_list:
+                    K_list.append(tmp_K_dict[target_epsilon])
+                    K_sgd_list.append(tmp_K_sgd_dict[target_epsilon])
+                plt.plot(epsilon_list, K_list, label='K (ours)', marker = 'o')
+                plt.plot(epsilon_list, K_sgd_list, label='K (sgd)', marker = 'o')
+                plt.legend()
+                plt.xlabel(r'target $\epsilon$')
+                plt.ylabel(r'required step K')
+                plt.savefig('./compare_stepK.pdf')
+                plt.clf()
 
         else:
             # given a single burn-in, temperature, sample from scratch on D:
@@ -254,7 +276,38 @@ class Runner():
                 avg_accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.finetune_step, self.args.temp, w_list)
                 print('the avg accuracy on removed D finetune is:'+str(avg_accuracy_finetune))
                 print('the average time cost: '+str(mean_time))
-        
+    
+    def get_z(self, num_remove):
+        # get the Z in SGD
+        C = ((self.n - num_remove) / self.n) * (1 - self.eta * self.L * self.m / (self.L + self.m)) + num_remove / self.n
+        T = sp.symbols('T')
+        fT = ((1 - C**T) / (1 - C)) * ((2 * num_remove * self.eta * self.M) / self.n)
+        part_1 = float(sp.limit(fT, T, sp.oo))
+        part_2 = 1
+        return min(part_1, part_2)
+    
+    def search_sgd_step(self, epsilon_list, alpha_dict):
+        K_sgd_dict = {}
+        for key in alpha_dict.keys():
+            tmp_alpha_dict = alpha_dict[key]
+            tmp_K_dict = {}
+            for target_epsilon in epsilon_list:
+                target_alpha = tmp_alpha_dict[target_epsilon]
+                Z = self.get_z(key)
+                c = 1 - (self.eta * (self.L * self.m) / (self.L + self.m))
+                K = sp.symbols('K', integer = True)
+                part_1 = ((target_alpha * Z**2) / (2 * self.eta * self.args.sigma**2)) * ((c**2 - 1))
+                inequality1 =  part_1 / (1 - (1 / c**(2 * K))) - target_epsilon < 0
+                inequality2 = K > 0
+                solutions1 = sp.solve(inequality1, K)
+                solutions2 = sp.solve(inequality2, K)
+                num_list = re.findall(r"[-+]?\d*\.\d+|\d+", str(solutions1))
+                num_list = [float(num) for num in num_list if float(num) > 0]
+                solution = math.ceil(num_list[0])
+                tmp_K_dict[target_epsilon] = solution
+            K_sgd_dict[key] = tmp_K_dict
+            return K_sgd_dict
+
     def get_removed_data(self, num_remove):
         X_train_removed = self.X_train[:-num_remove,:]
         y_train_removed = self.y_train[:-num_remove]
@@ -442,6 +495,8 @@ def main():
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')
+
+
     parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
     parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
@@ -449,6 +504,7 @@ def main():
     parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
     parser.add_argument('--paint_utility_sigma', type = int, default = 0, help = 'paint utility - sigma figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
+    parser.add_argument('--compare_k', type = int, default = 0, help = 'calculae the K step required by our bound and baseline bound')
     args = parser.parse_args()
     print(args)
 
