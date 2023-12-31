@@ -202,7 +202,7 @@ class Runner():
             plt.legend()
             plt.xlabel(r'target $\epsilon$')
             plt.ylabel(r'required step K')
-            plt.savefig('./compare_stepK.pdf')
+            plt.savefig('./result/LMC/paint_compare_k/compare_stepK.pdf')
             plt.clf()
 
         elif self.args.find_best_batch == 1:
@@ -219,7 +219,7 @@ class Runner():
             plt.legend()
             plt.xlabel(r'batch size b')
             plt.ylabel(r'required step K * b')
-            plt.savefig('./find_best_b.pdf')
+            plt.savefig('./result/LMC/paint_find_best_batch/find_best_b.pdf')
             plt.clf()
 
 

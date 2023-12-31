@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 # below is the slow version of per sample gradient
 # on Dec 30: add clip the weight after each update, (projection function)
-def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, potential, burn_in = 10000, len_list = 1, step=0.1, M = 1, projection = 0, batch_size = 0):
+def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, potential, burn_in = 10000, len_list = 1, step=0.1, M = 1, projection = None, batch_size = None):
     # randomly sample from N(0, I)
     if init_point == None:
         w0 = torch.randn(dim_w).to(device)
@@ -19,7 +19,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
         w0 = init_point.to(device)
     wi = w0
     samples = []
-    if batch_size == 0:
+    if batch_size is None:
         for i in range(len_list + burn_in):
             z = torch.sigmoid(y * X.mv(wi))
             per_sample_grad = X * ((z-1) * y).unsqueeze(-1) + lam * wi.repeat(X.size(0),1)
@@ -28,7 +28,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
             clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
             grad = clipped_grad.mean(0)
             wi = wi.detach() - step * grad + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w).to(device)
-            if projection != 0:
+            if projection is not None:
                 w_norm = torch.norm(wi, p=2)
                 wi = (wi / w_norm) * projection
             samples.append(wi.detach().cpu().numpy())
@@ -47,7 +47,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
             clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
             grad = clipped_grad.mean(0)
             wi = wi.detach() - step * grad + np.sqrt(2 * step * sigma**2) * torch.randn(dim_w).to(device)
-            if projection != 0:
+            if projection is not None:
                 w_norm = torch.norm(wi, p=2)
                 wi = (wi / w_norm) * projection
             samples.append(wi.detach().cpu().numpy())
