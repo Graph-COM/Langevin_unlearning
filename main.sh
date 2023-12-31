@@ -27,4 +27,7 @@
 #nohup python -u main.py --lam 1e-6 --dataset MNIST --paint_unlearning_sigma 1 --gpu 6 >./MNIST_paint_unlearning_sigma_2.log 2>&1 </dev/null &
 
 # calculate unlearning step between our bound and the baseline bound
-nohup python -u main.py --lam 1e-6 --dataset MNIST --compare_k 1 --gpu 2 >./MNIST_compare_k.log 2>&1 </dev/null &
+#nohup python -u main.py --lam 1e-6 --dataset MNIST --compare_k 1 --gpu 2 >./MNIST_compare_k.log 2>&1 </dev/null &
+
+# find the best batch size b per gradient for sgd
+nohup python -u main.py --lam 1e-6 --dataset MNIST --find_best_batch 1 --gpu 6 >./MNIST_find_best_batch.log 2>&1 </dev/null &

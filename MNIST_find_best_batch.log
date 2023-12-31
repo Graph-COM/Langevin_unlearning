@@ -1,0 +1,2 @@
+Namespace(M=1, burn_in=35000, compare_k=0, data_dir='./data', dataset='MNIST', extractor='raw_feature', find_best_batch=1, finetune_step=50, gaussian_dim=10, gpu=6, lam=1e-06, len_list=10000, num_removes=1000, num_steps=10000, paint_unlearning_sigma=0, paint_utility_epsilon=0, paint_utility_s=0, paint_utility_sigma=0, result_dir='./result', search_burnin=0, search_burnin_newdata=0, search_finetune=0, sigma=0.1, train_mode='binary')
+Extracted features not found, loading raw features.

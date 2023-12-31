@@ -226,49 +226,25 @@ class Runner():
         elif self.args.compare_k == 1:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
             num_remove_list = [1000]
-            b_list = [2048, 4096, self.n]
+            b_list = [128, 512, 1024, 2048, self.n]
             K_dict, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
-            # alpha dict: key = num_remove, then has a dict with key = epsilon, item = alpha
-            # K dict: key = num_remove, then has a dict with key = epsilon, item = K
+            
+            K_sgd_dict = self.search_sgd_step(epsilon_list, alpha_dict)
             for key in K_dict.keys():
                 tmp_K_dict = K_dict[key]
+                tmp_K_sgd_dict = K_sgd_dict[key]
                 K_list = []
+                K_sgd_list = []
                 for target_epsilon in epsilon_list:
                     K_list.append(tmp_K_dict[target_epsilon])
-                #plt.plot(epsilon_list, np.array(K_list)*self.n, label='K (LMC)', marker = 'o')
-            for b in b_list:
-                K_sgd_dict = self.search_sgd_step(epsilon_list, alpha_dict, b)
-                for key in K_dict.keys():
-                    tmp_K_sgd_dict = K_sgd_dict[key]
-                    K_sgd_list = []
-                    for target_epsilon in epsilon_list:
-                        K_sgd_list.append(tmp_K_sgd_dict[target_epsilon])
-                        print(K_sgd_list)
-                    plt.plot(epsilon_list, np.array(K_sgd_list), label='K (sgd) b='+str(b), marker = 'o')
-            
-            plt.legend()
-            plt.xlabel(r'target $\epsilon$')
-            plt.ylabel(r'required step K')
-            plt.savefig('./compare_stepK.pdf')
-            plt.clf()
-
-        elif self.args.find_best_batch == 1:
-            epsilon_list = [0.1, 0.5, 1, 2, 5]
-            num_remove_list = [1000]
-            b_list = list(range(1, self.n, 10))
-            K_dict, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
-            for epsilon in tqdm(epsilon_list):
-                tmp_K_sgd_list = []
-                for b in tqdm(b_list):
-                    K_sgd_dict = self.search_sgd_step([epsilon], alpha_dict, b)
-                    tmp_K_sgd_list.append(K_sgd_dict[num_remove_list[0]][epsilon]*b)
-                plt.plot(b_list, np.array(tmp_K_sgd_list), label=r'K ($\epsilon$)='+str(epsilon))
-            plt.legend()
-            plt.xlabel(r'batch size b')
-            plt.ylabel(r'required step K * b')
-            plt.savefig('./find_best_b.pdf')
-            plt.clf()
-
+                    K_sgd_list.append(tmp_K_sgd_dict[target_epsilon])
+                plt.plot(epsilon_list, K_list, label='K (ours)', marker = 'o')
+                plt.plot(epsilon_list, K_sgd_list, label='K (sgd)', marker = 'o')
+                plt.legend()
+                plt.xlabel(r'target $\epsilon$')
+                plt.ylabel(r'required step K')
+                plt.savefig('./compare_stepK.pdf')
+                plt.clf()
 
         else:
             # given a single burn-in, temperature, sample from scratch on D:
@@ -316,15 +292,11 @@ class Runner():
     def search_sgd_step(self, epsilon_list, alpha_dict, b):
         K_sgd_dict = {}
         for key in alpha_dict.keys():
-            # here key = num_remove = S
             tmp_alpha_dict = alpha_dict[key]
             tmp_K_dict = {}
             for target_epsilon in epsilon_list:
                 target_alpha = tmp_alpha_dict[target_epsilon]
-                if key < b:
-                    Z = self.get_z(key, b)
-                else:
-                    Z = 1
+                Z = self.get_z(key, b)
                 c = 1 - (self.eta * (self.L * self.m) / (self.L + self.m))
                 K = sp.symbols('K', integer = True)
                 part_1 = ((target_alpha * Z**2) / (2 * self.eta * self.args.sigma**2)) * ((c**2 - 1))
@@ -536,7 +508,6 @@ def main():
     parser.add_argument('--paint_utility_sigma', type = int, default = 0, help = 'paint utility - sigma figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
     parser.add_argument('--compare_k', type = int, default = 0, help = 'calculae the K step required by our bound and baseline bound')
-    parser.add_argument('--find_best_batch', type = int, default = 0, help = 'find the best batch per gradient for sgd')
     args = parser.parse_args()
     print(args)
 
