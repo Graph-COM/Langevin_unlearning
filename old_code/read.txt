@@ -1,0 +1,4 @@
+main_old is original bad code
+main_v1 is empirical version
+Main_v2 tries to add some theory
+the latest main_lmc and main_sgd is about some comparison on two methods
