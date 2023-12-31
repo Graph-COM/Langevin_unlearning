@@ -1,7 +1,9 @@
 import numpy as np
-import torch
 from tqdm import tqdm
 from opacus.optimizers.optimizer import DPOptimizer
+import random
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -33,9 +35,13 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
         return samples[burn_in:]
     else:
         # batch stochastic sgd for langevin
+        # first sample a batch of y and X
+        batch_list = random.sample(list(range(y.shape[0])), batch_size)
+        X_batch = X[batch_list]
+        y_batch = y[batch_list]
         for i in range(len_list + burn_in):
-            z = torch.sigmoid(y * X.mv(wi))
-            per_sample_grad = X * ((z-1) * y).unsqueeze(-1) + lam * wi.repeat(X.size(0),1)
+            z = torch.sigmoid(y_batch * X_batch.mv(wi))
+            per_sample_grad = X_batch * ((z-1) * y_batch).unsqueeze(-1) + lam * wi.repeat(X_batch.size(0),1)
             row_norms = torch.norm(per_sample_grad,dim=1)
             clipped_grad = per_sample_grad * ( M / row_norms).view(-1,1)
             clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
