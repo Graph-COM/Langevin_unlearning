@@ -1,5 +1,4 @@
 **/data/
 *.jpg
 *.pdf
-*.npy
 *.pt
