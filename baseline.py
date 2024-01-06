@@ -28,20 +28,9 @@ class Runner():
         if args.dataset == 'MNIST':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.dim_w = 784
-        elif args.dataset == '2dgaussian':
-            mean_1 = torch.tensor([-2, -2])
-            mean_2 = torch.tensor([2, 2])
-            std = torch.tensor([1, 1])
-            self.X_train, self.y_train = generate_gaussian(2, 10000, mean_1, mean_2, std)
-            self.X_test, self.y_test = generate_gaussian(2, 1000, mean_1, mean_2, std)
-            self.dim_w = 2
-        elif args.dataset == 'kdgaussian':
-            mean_1 = torch.ones(args.gaussian_dim) * -2
-            mean_2 = torch.ones(args.gaussian_dim) * 2
-            std = torch.ones(args.gaussian_dim)
-            self.X_train, self.y_train = generate_gaussian(args.gaussian_dim, 10000, mean_1, mean_2, std)
-            self.X_test, self.y_test = generate_gaussian(args.gaussian_dim, 1000, mean_1, mean_2, std)
-            self.dim_w = args.gaussian_dim
+        elif args.dataset == 'CIFAR10':
+            self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
+            self.dim_w = 512
         # make the norm of x = 1, MNIST naturally satisfys
         self.X_train_norm = self.X_train.norm(dim=1, keepdim=True)
         self.X_train = self.X_train / self.X_train_norm
@@ -66,9 +55,9 @@ class Runner():
         self.M = self.args.M
         print('M lipschitz constant:'+str(self.M))
         # calculate step size
-        max_eta = min( 2 * (1 - (self.m / 2)*(1/self.L + 1/self.m)) * (1/self.L + 1/self.m), 2 / (self.L + self.m) ) 
+        #max_eta = min( 2 * (1 - (self.m / 2)*(1/self.L + 1/self.m)) * (1/self.L + 1/self.m), 2 / (self.L + self.m) ) 
         #self.eta = min(max_eta, 1)
-        self.eta = max_eta
+        self.eta = 1 / self.L
         print('step size eta:'+str(self.eta))
         # calculate RDP delta
         self.delta = 1 / self.n
@@ -81,11 +70,14 @@ class Runner():
             baseline_step_size = 2 / (self.L + self.m)
             X_train_removed, y_train_removed = self.get_removed_data(1)
             baseline_learn_scratch_acc, mean_time, w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
-            print('baseline learn scratch acc: ' + str(baseline_learn_scratch_acc))
+            np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_scratch.npy', baseline_learn_scratch_acc)
+            print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
+            print('baseline learn scratch acc std: ' + str(np.std(baseline_learn_scratch_acc)))
             baseline_unlearn_scratch_acc, mean_time = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, self.args.burn_in, None, len_list = 1)
-            print('baseline unlearn scratch acc: ' + str(baseline_unlearn_scratch_acc))
+            np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_scratch.npy', baseline_learn_scratch_acc)
+            print('baseline unlearn scratch acc: ' + str(np.mean(baseline_unlearn_scratch_acc)))
+            print('baseline unlearn scratch acc std: ' + str(np.std(baseline_unlearn_scratch_acc)))
             _, mean_time, w_list_new = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, 1, w_list, len_list = 1, return_w = True)
-            baseline_unlearn_finetune_acc_list = []
             for epsilon in epsilon_list:
                 baseline_sigma = self.calculate_baseline_sigma(epsilon)
                 print('baseline sigma: ' + str(baseline_sigma))
@@ -95,30 +87,35 @@ class Runner():
                 for i in range(100):
                     accuracy = self.test_accuracy(w_list_new_totest[i])
                     baseline_unlearn_finetune_acc_list.append(accuracy)
-                baseline_unlearn_finetune_acc = np.mean(baseline_unlearn_finetune_acc_list)
-                print('baseline unlearn finetune acc: ' + str(baseline_unlearn_finetune_acc))
-                baseline_unlearn_finetune_acc_list.append(baseline_unlearn_finetune_acc)
+                print('baseline unlearn finetune acc: ' + str(np.mean(baseline_unlearn_finetune_acc_list)))
+                print('baseline unlearn finetune acc std: ' + str(np.std(baseline_unlearn_finetune_acc_list)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_finetune'+str(epsilon)+'.npy', baseline_unlearn_finetune_acc_list)
 
             # run langevin unlearning
             num_remove_list = [1]
-            sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021]
+            # sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+            sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
             for epsilon, sigma in zip(epsilon_list, sigma_list):
                 print('epsilon: ' + str(epsilon))
                 self.args.sigma = sigma
                 K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, self.args.sigma)
                 lmc_learn_scratch_acc, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-                print('LMc learn scratch acc: ' + str(lmc_learn_scratch_acc))
+                print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+                print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_learn_scratch'+str(epsilon)+'.npy', lmc_learn_scratch_acc)
                 lmc_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None, len_list = 1)
-                print('LMc unlearn scratch acc: ' + str(lmc_unlearn_scratch_acc))
-                lmc_unlearn_finetune_acc_list = []
+                print('LMc unlearn scratch acc: ' + str(np.mean(lmc_unlearn_scratch_acc)))
+                print('LMc unlearn scratch acc std: ' + str(np.std(lmc_unlearn_scratch_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_unlearn_scratch'+str(epsilon)+'.npy', lmc_unlearn_scratch_acc)
                 lmc_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, int(K_dict[num_remove_list[0]][epsilon]), self.args.sigma, w_list, len_list = 1)
-                print('LMc unlearn finetune acc: ' + str(lmc_unlearn_finetune_acc))
-                lmc_unlearn_finetune_acc_list.append(lmc_unlearn_finetune_acc)
+                print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
+                print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_unlearn_finetune'+str(epsilon)+'.npy', lmc_unlearn_finetune_acc)
             import pdb; pdb.set_trace()
     def find_sigma(self):
         num_remove_list = [1]
         epsilon_list = [0.1, 0.5, 1, 2, 5]
-        sigma = 0.1
+        sigma = 0.0028
         K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, sigma)
         print(K_dict)
         #import pdb; pdb.set_trace()
@@ -144,14 +141,14 @@ class Runner():
                 new_w_list.append(new_w)
                 accuracy = self.test_accuracy(new_w)
                 trial_list.append(accuracy)
-        avg_accuracy = np.mean(trial_list)
+        #avg_accuracy = np.mean(trial_list)
         mean_time = np.mean(time_list)
 
         if return_w:
             new_w_list = np.stack(new_w_list, axis=0)
-            return avg_accuracy, mean_time, new_w_list
+            return trial_list, mean_time, new_w_list
         else:
-            return avg_accuracy, mean_time
+            return trial_list, mean_time
     
     def get_mean_performance(self, X, y, step, sigma, w_list, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
@@ -175,14 +172,14 @@ class Runner():
                 new_w_list.append(new_w)
                 accuracy = self.test_accuracy(new_w)
                 trial_list.append(accuracy)
-        avg_accuracy = np.mean(trial_list)
+        #avg_accuracy = np.mean(trial_list)
         mean_time = np.mean(time_list)
 
         if return_w:
             new_w_list = np.stack(new_w_list, axis=0)
-            return avg_accuracy, mean_time, new_w_list
+            return trial_list, mean_time, new_w_list
         else:
-            return avg_accuracy, mean_time
+            return trial_list, mean_time
     
     def run_gradient_descent(self, init_point, X, y, baseline_step_size, burn_in, len_list):
         start_time = time.time()
@@ -269,7 +266,9 @@ class Runner():
         return accuracy
     def run_unadjusted_langvin(self, init_point, X, y, burn_in, sigma, len_list):
         start_time = time.time()
-        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam, sigma = sigma, device = self.device, potential = logistic_potential, burn_in = burn_in, len_list = len_list, step=self.eta, M = self.M)
+        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam, sigma = sigma, 
+                                               device = self.device, potential = logistic_potential, burn_in = burn_in, 
+                                               len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
         return w_list, end_time - start_time
 
@@ -300,6 +299,7 @@ def main():
 
     runner = Runner(args)
     runner.get_metadata()
+    # here requires to find sigma by hand
     #runner.find_sigma()
     runner.train()
 

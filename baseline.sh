@@ -1,1 +1,2 @@
-nohup python -u baseline.py --lam 1e-6 --dataset MNIST --gpu 7 >./baseline.log 2>&1 </dev/null &
+#nohup python -u baseline.py --lam 1e-6 --dataset MNIST --gpu 4 >./MNIST_baseline.log 2>&1 </dev/null &
+nohup python -u baseline.py --lam 1e-6 --dataset CIFAR10 --gpu 4 >./CIFAR10_baseline.log 2>&1 </dev/null &

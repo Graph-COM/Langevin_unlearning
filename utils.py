@@ -5,9 +5,15 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import pandas as pd
+import nltk
 
 import torch
-from torchvision import datasets, transforms
+
+from datasets import load_dataset
+from torchvision import datasets, transforms, models
+from transformers import AutoTokenizer, AutoModel
+
 
 
 
@@ -17,6 +23,21 @@ def onehot(y):
     y_onehot.scatter_(1, y.long().unsqueeze(1), 1)
     return y_onehot
 
+#cifar10_transform = transforms.Compose([transforms.Grayscale(num_output_channels=1),transforms.ToTensor()])
+
+cifar10_transform = transforms.Compose([
+    transforms.Resize(224),  
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  
+])
+
+class ResNetFeatureExtractor(torch.nn.Module):
+    def __init__(self, pretrained_model):
+        super(ResNetFeatureExtractor, self).__init__()
+        self.features = torch.nn.Sequential(*list(pretrained_model.children())[:-1])
+    def forward(self, x):
+        x = self.features(x)
+        return x
 
 def load_features(args):
     ckpt_file = '%s/%s_%s_extracted.pth' % (args.data_dir, args.extractor, args.dataset)
@@ -56,6 +77,93 @@ def load_features(args):
             #y_train = y_train[train_indices].eq(3).float()
             X_test = X_test[test_indices]
             y_test = y_test[test_indices].eq(3).float()
+        elif args.dataset == 'CIFAR10':
+            if not os.path.exists('./data/CIFAR10/train.pt'):
+                trainset = datasets.CIFAR10(args.data_dir, train=True, download = True, transform=cifar10_transform)
+                testset = datasets.CIFAR10(args.data_dir, train=False, download = True, transform=cifar10_transform)
+                trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=False)
+                testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False)
+                pretrained_resnet = models.resnet18(pretrained=True)
+                feature_extractor = ResNetFeatureExtractor(pretrained_resnet)
+                feature_extractor.eval()
+                train_feature = []
+                test_feature = []
+                with torch.no_grad():
+                    for inputs, labels in tqdm(trainloader):
+                        output = feature_extractor(inputs)
+                        train_feature.append([output.reshape(-1), labels])
+                    for inputs, labels in tqdm(testloader):
+                        output = feature_extractor(inputs)
+                        test_feature.append([output.reshape(-1), labels])
+                torch.save(train_feature, './data/CIFAR10/train.pt')
+                torch.save(test_feature, './data/CIFAR10/test.pt')
+                trainset = train_feature
+                testset = test_feature
+            else:
+                trainset = torch.load('./data/CIFAR10/train.pt')
+                testset = torch.load('./data/CIFAR10/test.pt')
+            X_train = torch.zeros(len(trainset), 512)
+            y_train = torch.zeros(len(trainset))
+            X_test = torch.zeros(len(testset),512)
+            y_test = torch.zeros(len(testset))
+            for i in range(len(trainset)):
+                x, y = trainset[i]
+                X_train[i] = x.view(512)
+                y_train[i] = y.item()
+            for i in range(len(testset)):
+                x, y = testset[i]
+                X_test[i] = x.view(512)
+                y_test[i] = y.item()
+            X_train_3 = X_train[torch.where(y_train.eq(3))]
+            y_train_3 = y_train[torch.where(y_train.eq(3))]
+            X_train_8 = X_train[torch.where(y_train.eq(8))]
+            y_train_8 = y_train[torch.where(y_train.eq(8))]
+            X_train = torch.cat((X_train_3, X_train_8), 0)
+            y_train = torch.cat((y_train_3, y_train_8), 0).eq(3).float()
+            test_indices = (y_test.eq(3) + y_test.eq(8)).gt(0)
+            X_test = X_test[test_indices]
+            y_test = y_test[test_indices].eq(3).float()
+        elif args.dataset == 'SST':
+            #nltk.download('punkt')
+            if not os.path.exists('./data/SST/train.pt'):
+                dataset = load_dataset("glue", "sst2")
+                model_name = 'roberta-base'
+                tokenizer = AutoTokenizer.from_pretrained(model_name)
+                '''def tokenize_function(examples):
+                    return tokenizer(examples["sentence"], padding="max_length", truncation=True)
+                tokenized_datasets = dataset.map(tokenize_function, batched=True)'''
+                model = AutoModel.from_pretrained(model_name)
+                train_feature = []
+                test_feature = []
+                with torch.no_grad():
+                    for row in tqdm(dataset['train']):
+                        inputs = tokenizer(row['sentence'], return_tensors="pt")
+                        outputs = model(**inputs)
+                        last_hidden_states = outputs.last_hidden_state
+                        label = row['label']
+                        train_feature.append([last_hidden_states, label])
+                    for row in tqdm(dataset['test']):
+                        inputs = tokenizer(row['sentence'], return_tensors="pt")
+                        outputs = model(**inputs)
+                        last_hidden_states = outputs.last_hidden_state
+                        label = row['label']
+                        test_feature.append([last_hidden_states, label])
+                torch.save(train_feature, './data/SST/train.pt')
+                torch.save(test_feature, './data/SST/test.pt')
+            else:
+                train_feature = torch.load('./data/SST/train.pt')
+            X_train = torch.zeros(20000, 768)
+            y_train = torch.zeros(20000)
+            X_test = torch.zeros(1000, 768)
+            y_test = torch.zeros(1000)
+            for i in range(20000):
+                x, y = train_feature[i]
+                X_train[i] = torch.sum(x, dim = 1).view(768)
+                y_train[i] = y
+            for i in range(20000, 21000):
+                x, y = train_feature[i]
+                X_test[i-20000] = torch.sum(x, dim = 1).view(768)
+                y_test[i-20000] = y
         else:
             print("Error: Unknown dataset %s. Aborting." % args.dataset) 
             sys.exit(1)
