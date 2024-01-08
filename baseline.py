@@ -46,11 +46,11 @@ class Runner():
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
         self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
-        self.L = 100 * self.L
+        self.L = self.L
         print('L smooth constant'+str(self.L))
         # m-strongly convex constant
         self.m = self.args.lam * self.n
-        self.m = 100 * self.m
+        self.m = self.m
         print('m strongly convex:'+str(self.m))
         # M-Lipschitz constant
         self.M = self.args.M
@@ -148,8 +148,10 @@ class Runner():
 
             # run langevin unlearning
             num_remove_list = [1]
-            #sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
-            sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
+            if self.args.dataset == 'MNIST':
+                sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+            elif self.args.dataset == 'CIFAR10':
+                sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
             for epsilon, sigma in zip(epsilon_list, sigma_list):
                 print('epsilon: ' + str(epsilon))
                 self.args.sigma = sigma
@@ -341,7 +343,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 35000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 10000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')

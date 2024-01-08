@@ -276,7 +276,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 35000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 10000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')
