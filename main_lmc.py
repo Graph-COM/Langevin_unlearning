@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 
-from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian
+from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian, create_nested_folder
 from langevin import unadjusted_langevin_algorithm
 from density import logistic_density, logistic_potential
 
@@ -94,32 +94,37 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/learn_scratch_w.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
             # calculate K
-            epsilon_list = [1] # set epsilon = 1
+            epsilon_list = [0.5, 1, 2] # set epsilon = 1
             K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
-            K_list = []
-            for num_remove in num_remove_list:
-                X_train_removed, y_train_removed = self.get_removed_data(num_remove)
-                accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_Dnew_remove'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
-                accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][1], self.args.sigma, w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_finetune_remove'+str(num_remove)+'.npy', accuracy_finetune)
-                K_list.append(K_dict[num_remove][1])
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/K_list.npy', K_list)
+            
+            for epsilon_idx, epsilon in enumerate(epsilon_list):
+                K_list = []
+                for num_remove in num_remove_list:
+                    create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/')
+                    X_train_removed, y_train_removed = self.get_removed_data(num_remove)
+                    accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None)
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_scratch_Dnew_remove'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
+                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][1], self.args.sigma, w_list)
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_finetune_remove'+str(num_remove)+'.npy', accuracy_finetune)
+                    K_list.append(K_dict[num_remove][1])
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/K_list.npy', K_list)
         elif self.args.paint_utility_epsilon:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
-            num_remove_list = [1000]
+            num_remove_list = [10, 300, 1000]
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D.npy', accuracy_scratch_D)
             # calculate K
             K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/K_list.npy', K_dict)
-            K_list = []
-            for epsilon in epsilon_list:
-                X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
-                accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][epsilon], self.args.sigma, w_list)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
-                K_list.append(K_dict[num_remove_list[0]][epsilon])
+            for remove_idx, num_remove in enumerate(num_remove_list):
+                K_list = []
+                for epsilon in epsilon_list:
+                    X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[remove_idx])
+                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[remove_idx]][epsilon], self.args.sigma, w_list)
+                    create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/')
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
+                    K_list.append(K_dict[num_remove_list[0]][epsilon])
         elif self.args.paint_unlearning_sigma:
             num_remove_list = [1000]
             epsilon_list = [1]
@@ -276,7 +281,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 10000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 15000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')

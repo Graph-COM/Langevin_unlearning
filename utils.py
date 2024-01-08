@@ -233,5 +233,9 @@ def plot_w_2dgaussian(w_init_list, title):
     plt.clf()
 
 
+def create_nested_folder(path):
+    os.makedirs(path, exist_ok=True)
+
+
     
     
