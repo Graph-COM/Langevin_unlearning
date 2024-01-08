@@ -148,7 +148,7 @@ class Runner():
 
             # run langevin unlearning
             num_remove_list = [1]
-            # sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+            #sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
             sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
             for epsilon, sigma in zip(epsilon_list, sigma_list):
                 print('epsilon: ' + str(epsilon))
@@ -170,7 +170,7 @@ class Runner():
     def find_sigma(self):
         num_remove_list = [1]
         epsilon_list = [0.1, 0.5, 1, 2, 5]
-        sigma = 0.0028
+        sigma = 0.0094
         K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, sigma)
         print(K_dict)
         #import pdb; pdb.set_trace()
@@ -341,7 +341,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 1000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 35000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')

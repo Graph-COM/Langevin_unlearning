@@ -58,11 +58,11 @@ class Runner():
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
         self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
-        self.L = 100 * self.L
+        self.L = self.L
         print('L smooth constant'+str(self.L))
         # m-strongly convex constant
         self.m = self.args.lam * self.n
-        self.m = 100 * self.m
+        self.m = self.m
         print('m strongly convex:'+str(self.m))
         # M-Lipschitz constant
         self.M = self.args.M
@@ -80,10 +80,10 @@ class Runner():
             if self.args.dataset == 'MNIST':
                 # list for MNIST
                 sigma_list = [0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000]
             elif self.args.dataset == 'CIFAR10':
                 sigma_list = [0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000]
             elif self.args.dataset == 'SST':
                 sigma_list = [0.01, 0.05, 0.1]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000]
