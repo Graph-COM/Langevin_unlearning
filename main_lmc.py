@@ -79,11 +79,11 @@ class Runner():
         if self.args.search_burnin:
             if self.args.dataset == 'MNIST':
                 # list for MNIST
-                sigma_list = [0.05, 0.1, 0.2]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 25000, 30000]
+                sigma_list = [0.05, 0.1]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000]
             elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.01, 0.05, 0.1, 0.2]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000]
+                sigma_list = [0.05, 0.1]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000]
             elif self.args.dataset == 'SST':
                 sigma_list = [0.01, 0.05, 0.1]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000]

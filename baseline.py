@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
 from scipy.optimize import minimize_scalar
+import seaborn as sns
 
 import torch
 import torch.nn as nn
@@ -45,11 +46,11 @@ class Runner():
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
         self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
-        self.L = self.L
+        self.L = 100 * self.L
         print('L smooth constant'+str(self.L))
         # m-strongly convex constant
         self.m = self.args.lam * self.n
-        self.m = self.m
+        self.m = 100 * self.m
         print('m strongly convex:'+str(self.m))
         # M-Lipschitz constant
         self.M = self.args.M
@@ -62,7 +63,61 @@ class Runner():
         # calculate RDP delta
         self.delta = 1 / self.n
         print('RDP constant delta:'+str(self.delta))
+
+    def sequential(self):
+        num_remove_list = [120]
+        num_remove_per_itr_list = [1, 2, 3, 4, 5, 10]
+        #num_remove_per_itr_list = [10]
+        target_epsilon = 1
         
+        for num_remove_per_itr in num_remove_per_itr_list:
+            num_step = int(num_remove_list[0]/num_remove_per_itr)
+            alpha_list = []
+            self.k_list = np.zeros(num_step+1).astype(int)
+            # first get k for step 1 as warm start
+            k_1 = 1
+            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, self.args.sigma)
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            while min_epsilon_s1_k1.fun > target_epsilon:
+                k_1 = k_1 + 1
+                epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, self.args.sigma)
+                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            # set k_1 in the list
+            self.k_list[1] = k_1
+            alpha_list.append(min_epsilon_s1_k1.x)
+
+            for step in tqdm(range(2,num_step+1)):
+                # here step start from 1. k_list[0] = 0 always
+                self.k_list[step] = 1
+                epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
+                min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                while min_epsilon_sstep_kstep.fun > target_epsilon:
+                    self.k_list[step] = self.k_list[step] + 1
+                    epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
+                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+            # accumulate k
+            accumulate_k = np.cumsum(self.k_list)
+            print(accumulate_k)
+            sns.lineplot(x=np.arange(num_remove_per_itr, num_remove_list[0]+1, num_remove_per_itr), y=accumulate_k[1:], label='num remove per itr: '+str(num_remove_per_itr), marker = 'o')
+        plt.legend()
+        plt.savefig('./cum_k.pdf')
+    
+    def epsilon_s1(self, alpha, k, S, sigma):
+        epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
+        return math.exp(- (1/alpha) * self.eta * self.m * k) * (2 * epsilon0 * (alpha - 0.5))
+
+    def epsilon_s_with_alpha(self, alpha, S, sigma, step):
+        # every time call this function, the k_list[step - 1], step > 1 must be greater than 0
+        if step == 1:
+            # the first step
+            epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
+            return math.exp(- (1/alpha) * self.eta * self.m * self.k_list[1]) * (2 * epsilon0 * (alpha - 0.5))
+        else:
+            part1 = math.exp(- (1/alpha) * self.eta * self.m * self.k_list[step])
+            step = step - 1
+            part2 = 2 * ((4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)) * (alpha - 0.5) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
+            return part1 * part2
+
     def train(self):
         if self.args.run_baseline:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
@@ -79,7 +134,7 @@ class Runner():
             print('baseline unlearn scratch acc std: ' + str(np.std(baseline_unlearn_scratch_acc)))
             _, mean_time, w_list_new = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, 1, w_list, len_list = 1, return_w = True)
             for epsilon in epsilon_list:
-                baseline_sigma = self.calculate_baseline_sigma(epsilon)
+                baseline_sigma = self.calculate_baseline_sigma(1, epsilon = epsilon)
                 print('baseline sigma: ' + str(baseline_sigma))
                 random_noise = np.random.normal(0, baseline_sigma, (100, 1, self.dim_w))
                 w_list_new_totest = torch.tensor(w_list_new + random_noise).float()
@@ -221,7 +276,7 @@ class Runner():
         return X_train_removed, y_train_removed
         
     
-    def calculate_baseline_sigma(self, I, D = 2, epsilon = 1):
+    def calculate_baseline_sigma(self, I, epsilon = 1):
         # calculate the noise for descent to delete
         gamma = (self.L - self.m) / (self.L + self.m)
         numerator = 4 * math.sqrt(2) * self.M * gamma**I
@@ -294,6 +349,7 @@ def main():
     parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--run_baseline', type = int, default = 1, help = 'run the baseline')
+    parser.add_argument('--sequential', type = int, default = 0, help = 'whether test sequential unlearning')
     args = parser.parse_args()
     print(args)
 
@@ -301,7 +357,11 @@ def main():
     runner.get_metadata()
     # here requires to find sigma by hand
     #runner.find_sigma()
-    runner.train()
+    if args.sequential == 1:
+        runner.sequential()
+    else:
+        runner.train()
+    
 
 
 if __name__ == '__main__':

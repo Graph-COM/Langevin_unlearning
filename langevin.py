@@ -26,7 +26,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
     if batch_size is None:
         for i in range(len_list + burn_in):
             z = torch.sigmoid(y * X.mv(wi))
-            per_sample_grad = X * ((z-1) * y).unsqueeze(-1) + lam * wi.repeat(X.size(0),1)
+            per_sample_grad = 100 * (X * ((z-1) * y).unsqueeze(-1) + lam * wi.repeat(X.size(0),1))
             row_norms = torch.norm(per_sample_grad,dim=1)
             clipped_grad = per_sample_grad * ( M / row_norms).view(-1,1)
             clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]
@@ -45,7 +45,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
         y_batch = y[batch_list]
         for i in range(len_list + burn_in):
             z = torch.sigmoid(y_batch * X_batch.mv(wi))
-            per_sample_grad = X_batch * ((z-1) * y_batch).unsqueeze(-1) + lam * wi.repeat(X_batch.size(0),1)
+            per_sample_grad = 100 * (X_batch * ((z-1) * y_batch).unsqueeze(-1) + lam * wi.repeat(X_batch.size(0),1))
             row_norms = torch.norm(per_sample_grad,dim=1)
             clipped_grad = per_sample_grad * ( M / row_norms).view(-1,1)
             clipped_grad[row_norms <= M] = per_sample_grad[row_norms <= M]

@@ -2,8 +2,8 @@
 
 
 # search burn in
-#nohup python -u main_lmc.py --lam 1e-6 --dataset MNIST --search_burnin 1 --gpu 0 >./MNIST_LMC_search_burnin.log 2>&1 </dev/null &
-#nohup python -u main_lmc.py --lam 1e-6 --dataset CIFAR10 --search_burnin 1 --gpu 5 >./CIFAR10_LMC_search_burnin.log 2>&1 </dev/null &
+nohup python -u main_lmc.py --lam 1e-6 --dataset MNIST --search_burnin 1 --gpu 0 >./MNIST_LMC_search_burnin.log 2>&1 </dev/null &
+nohup python -u main_lmc.py --lam 1e-6 --dataset CIFAR10 --search_burnin 1 --gpu 1 >./CIFAR10_LMC_search_burnin.log 2>&1 </dev/null &
 
 # paint utility - s figure
 #nohup python -u main_lmc.py --lam 1e-6 --dataset MNIST --paint_utility_s 1 --gpu 0 >./MNIST_LMC_paint_utility_s.log 2>&1 </dev/null &
