@@ -96,7 +96,6 @@ class Runner():
             # calculate K
             epsilon_list = [0.5, 1, 2] # set epsilon = 1
             K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
-            
             for epsilon_idx, epsilon in enumerate(epsilon_list):
                 K_list = []
                 for num_remove in num_remove_list:

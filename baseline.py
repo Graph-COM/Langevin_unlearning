@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 
-from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian
+from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian, create_nested_folder
 from langevin import unadjusted_langevin_algorithm
 from density import logistic_density, logistic_potential
 
@@ -121,8 +121,8 @@ class Runner():
     def train(self):
         if self.args.run_baseline:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
-            # first run algorithm #1 to learn and get parameters
-            baseline_step_size = 2 / (self.L + self.m)
+            target_k_list = [1, 2, 5]
+
             X_train_removed, y_train_removed = self.get_removed_data(1)
             baseline_learn_scratch_acc, mean_time, w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_scratch.npy', baseline_learn_scratch_acc)
@@ -132,50 +132,91 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_scratch.npy', baseline_learn_scratch_acc)
             print('baseline unlearn scratch acc: ' + str(np.mean(baseline_unlearn_scratch_acc)))
             print('baseline unlearn scratch acc std: ' + str(np.std(baseline_unlearn_scratch_acc)))
-            _, mean_time, w_list_new = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, 1, w_list, len_list = 1, return_w = True)
-            for epsilon in epsilon_list:
-                baseline_sigma = self.calculate_baseline_sigma(1, epsilon = epsilon)
-                print('baseline sigma: ' + str(baseline_sigma))
-                random_noise = np.random.normal(0, baseline_sigma, (100, 1, self.dim_w))
-                w_list_new_totest = torch.tensor(w_list_new + random_noise).float()
-                baseline_unlearn_finetune_acc_list = []
-                for i in range(100):
-                    accuracy = self.test_accuracy(w_list_new_totest[i])
-                    baseline_unlearn_finetune_acc_list.append(accuracy)
-                print('baseline unlearn finetune acc: ' + str(np.mean(baseline_unlearn_finetune_acc_list)))
-                print('baseline unlearn finetune acc std: ' + str(np.std(baseline_unlearn_finetune_acc_list)))
-                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_finetune'+str(epsilon)+'.npy', baseline_unlearn_finetune_acc_list)
+            
+            for target_k in target_k_list:
+                print('working on target k:'+str(target_k))
+                # first run algorithm #1 to learn and get parameters
+                baseline_step_size = 2 / (self.L + self.m)
+                _, mean_time, w_list_new = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, target_k, w_list, len_list = 1, return_w = True)
+                create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/')
+                for epsilon in epsilon_list:
+                    baseline_sigma = self.calculate_baseline_sigma(target_k, epsilon = epsilon)
+                    print('baseline sigma: ' + str(baseline_sigma))
+                    random_noise = np.random.normal(0, baseline_sigma, (100, 1, self.dim_w))
+                    w_list_new_totest = torch.tensor(w_list_new + random_noise).float()
+                    baseline_unlearn_finetune_acc_list = []
+                    for i in range(100):
+                        accuracy = self.test_accuracy(w_list_new_totest[i])
+                        baseline_unlearn_finetune_acc_list.append(accuracy)
+                    print('baseline unlearn finetune acc: ' + str(np.mean(baseline_unlearn_finetune_acc_list)))
+                    print('baseline unlearn finetune acc std: ' + str(np.std(baseline_unlearn_finetune_acc_list)))
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/baseline_acc_unlearn_finetune'+str(epsilon)+'.npy', baseline_unlearn_finetune_acc_list)
 
-            # run langevin unlearning
-            num_remove_list = [1]
-            if self.args.dataset == 'MNIST':
-                sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
-            elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
-            for epsilon, sigma in zip(epsilon_list, sigma_list):
-                print('epsilon: ' + str(epsilon))
-                self.args.sigma = sigma
-                K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, self.args.sigma)
-                lmc_learn_scratch_acc, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-                print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
-                print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
-                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_learn_scratch'+str(epsilon)+'.npy', lmc_learn_scratch_acc)
-                lmc_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None, len_list = 1)
-                print('LMc unlearn scratch acc: ' + str(np.mean(lmc_unlearn_scratch_acc)))
-                print('LMc unlearn scratch acc std: ' + str(np.std(lmc_unlearn_scratch_acc)))
-                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_unlearn_scratch'+str(epsilon)+'.npy', lmc_unlearn_scratch_acc)
-                lmc_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, int(K_dict[num_remove_list[0]][epsilon]), self.args.sigma, w_list, len_list = 1)
-                print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
-                print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
-                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/lmc_acc_unlearn_finetune'+str(epsilon)+'.npy', lmc_unlearn_finetune_acc)
+                # run langevin unlearning
+                num_remove_list = [1]
+                if target_k == 1:
+                    if self.args.dataset == 'MNIST':
+                        sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+                    elif self.args.dataset == 'CIFAR10':
+                        sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
+                elif target_k == 2:
+                    if self.args.dataset == 'MNIST':
+                        sigma_list = [0.09368591346136476, 0.018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
+                    elif self.args.dataset == 'CIFAR10':
+                        sigma_list = [0.12169189471997069, 0.02457275474243164, 0.012432862245239257, 0.006353760723266601, 0.002700806646057129]
+                elif target_k == 5:
+                    if self.args.dataset == 'MNIST':
+                        sigma_list = [0.09364013709448243, 0.018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
+                    elif self.args.dataset == 'CIFAR10':
+                        sigma_list = [0.1216369630797119, 0.024517823102172855, 0.012377930604980467, 0.006317139629760741, 0.002655030279174805]
+                else:
+                    # for unseen target k, search it here
+                    sigma_list = []
+                    for epsilon in epsilon_list:
+                        sigma_list.append(self.search_k(target_k, epsilon))
+                    print(sigma_list)
+
+                for epsilon, sigma in zip(epsilon_list, sigma_list):
+                    print('epsilon: ' + str(epsilon))
+                    self.args.sigma = sigma
+                    K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, self.args.sigma)
+                    lmc_learn_scratch_acc, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+                    print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+                    print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_learn_scratch'+str(epsilon)+'.npy', lmc_learn_scratch_acc)
+                    lmc_unlearn_scratch_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None, len_list = 1)
+                    print('LMc unlearn scratch acc: ' + str(np.mean(lmc_unlearn_scratch_acc)))
+                    print('LMc unlearn scratch acc std: ' + str(np.std(lmc_unlearn_scratch_acc)))
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_unlearn_scratch'+str(epsilon)+'.npy', lmc_unlearn_scratch_acc)
+                    lmc_unlearn_finetune_acc, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, int(K_dict[num_remove_list[0]][epsilon]), self.args.sigma, w_list, len_list = 1)
+                    print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
+                    print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
+                    np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_unlearn_finetune'+str(epsilon)+'.npy', lmc_unlearn_finetune_acc)
             import pdb; pdb.set_trace()
-    def find_sigma(self):
+
+    def search_k(self, target, epsilon, lower = 1e-9, upper = 0.15):
+        if self.calculate_k_with_sigma(epsilon, lower) < target or self.calculate_k_with_sigma(epsilon, upper) > target:
+            print('not good upper lowers')
+            return
+        while lower <= upper:
+            mid = (lower + upper) / 2
+            k = self.calculate_k_with_sigma(epsilon, mid)
+            if k == target:
+                print('find sigma for '+str(epsilon)+'k '+str(target))
+                print(mid)
+                return mid
+            elif k < target:
+                upper = mid
+            else:
+                lower = mid
+            
+
+    def calculate_k_with_sigma(self, epsilon, sigma):
         num_remove_list = [1]
-        epsilon_list = [0.1, 0.5, 1, 2, 5]
-        sigma = 0.0094
+        epsilon_list = [epsilon]
         K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, sigma)
-        print(K_dict)
-        #import pdb; pdb.set_trace()
+        return(K_dict[1][epsilon])
+    
     def get_mean_baseline(self, X, y, baseline_step_size, step, w_list, len_list = 1, return_w = False, num_trial = 100):
         new_w_list = []
         trial_list = []
@@ -305,12 +346,12 @@ class Runner():
                 epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                 min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
                 while min_epsilon_with_k.fun > target_epsilon:
-                    K = K + 10
+                    K = K + 1
                     epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                     min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
                 K_list[target_epsilon] = K
                 alpha_list[target_epsilon] = min_epsilon_with_k.x
-                print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
+                #print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
             K_dict[num_remove] = K_list
             alpha_dict[num_remove] = alpha_list
         return K_dict, alpha_dict
@@ -352,6 +393,7 @@ def main():
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--run_baseline', type = int, default = 1, help = 'run the baseline')
     parser.add_argument('--sequential', type = int, default = 0, help = 'whether test sequential unlearning')
+    parser.add_argument('--find_k', type = int, default = 0, help = 'find the k')
     args = parser.parse_args()
     print(args)
 
@@ -361,6 +403,18 @@ def main():
     #runner.find_sigma()
     if args.sequential == 1:
         runner.sequential()
+    elif args.find_k == 1:
+        target_k_list = [1, 2, 5]
+        epsilon_list = [0.1, 0.5, 1, 2, 5]
+        
+        for target_k in target_k_list:
+            result_list = []
+            for epsilon in epsilon_list:
+                result_sigma = runner.search_k(target_k, epsilon)
+                result_list.append(result_sigma)
+            print('target k:'+str(target_k))
+            print(result_list)
+
     else:
         runner.train()
     
