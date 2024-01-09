@@ -65,9 +65,8 @@ class Runner():
         print('RDP constant delta:'+str(self.delta))
 
     def sequential(self):
-        num_remove_list = [120]
-        num_remove_per_itr_list = [1, 2, 3, 4, 5, 10]
-        #num_remove_per_itr_list = [10]
+        num_remove_list = [100]
+        num_remove_per_itr_list = [5, 10, 20]
         target_epsilon = 1
         
         for num_remove_per_itr in num_remove_per_itr_list:
@@ -120,9 +119,11 @@ class Runner():
 
     def train(self):
         if self.args.run_baseline:
-            epsilon_list = [0.1, 0.5, 1, 2, 5]
+            epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
             target_k_list = [1, 2, 5]
 
+            baseline_step_size = 2 / (self.L + self.m)
+            
             X_train_removed, y_train_removed = self.get_removed_data(1)
             baseline_learn_scratch_acc, mean_time, w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_scratch.npy', baseline_learn_scratch_acc)
@@ -136,7 +137,7 @@ class Runner():
             for target_k in target_k_list:
                 print('working on target k:'+str(target_k))
                 # first run algorithm #1 to learn and get parameters
-                baseline_step_size = 2 / (self.L + self.m)
+                
                 _, mean_time, w_list_new = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, target_k, w_list, len_list = 1, return_w = True)
                 create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/')
                 for epsilon in epsilon_list:
@@ -156,19 +157,19 @@ class Runner():
                 num_remove_list = [1]
                 if target_k == 1:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+                        sigma_list = [0.1872, 0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
+                        sigma_list = [0.2431, 0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
                 elif target_k == 2:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.09368591346136476, 0.018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
+                        sigma_list = [0.18714501953125, 0.09368591346136476, 0.018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.12169189471997069, 0.02457275474243164, 0.012432862245239257, 0.006353760723266601, 0.002700806646057129]
+                        sigma_list = [0.24309802246093754, 0.12169189471997069, 0.02457275474243164, 0.012432862245239257, 0.006353760723266601, 0.002700806646057129]
                 elif target_k == 5:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.09364013709448243, 0.018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
+                        sigma_list = [0.18709939575195314, 0.09364013709448243, 0.018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.1216369630797119, 0.024517823102172855, 0.012377930604980467, 0.006317139629760741, 0.002655030279174805]
+                        sigma_list = [0.24304327392578123, 0.1216369630797119, 0.024517823102172855, 0.012377930604980467, 0.006317139629760741, 0.002655030279174805]
                 else:
                     # for unseen target k, search it here
                     sigma_list = []
@@ -178,6 +179,8 @@ class Runner():
 
                 for epsilon, sigma in zip(epsilon_list, sigma_list):
                     print('epsilon: ' + str(epsilon))
+                    if epsilon != 0.05:
+                        break
                     self.args.sigma = sigma
                     K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list, self.args.sigma)
                     lmc_learn_scratch_acc, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
@@ -194,7 +197,7 @@ class Runner():
                     np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_unlearn_finetune'+str(epsilon)+'.npy', lmc_unlearn_finetune_acc)
             import pdb; pdb.set_trace()
 
-    def search_k(self, target, epsilon, lower = 1e-9, upper = 0.15):
+    def search_k(self, target, epsilon, lower = 1e-3, upper = 0.30):
         if self.calculate_k_with_sigma(epsilon, lower) < target or self.calculate_k_with_sigma(epsilon, upper) > target:
             print('not good upper lowers')
             return
@@ -209,6 +212,9 @@ class Runner():
                 upper = mid
             else:
                 lower = mid
+            '''print(lower)
+            print(upper)
+            print(k)'''
             
 
     def calculate_k_with_sigma(self, epsilon, sigma):
@@ -405,8 +411,8 @@ def main():
         runner.sequential()
     elif args.find_k == 1:
         target_k_list = [1, 2, 5]
-        epsilon_list = [0.1, 0.5, 1, 2, 5]
-        
+        #epsilon_list = [0.01, 0.05, 0.1, 0.5, 1, 2, 5]
+        epsilon_list = [0.05]
         for target_k in target_k_list:
             result_list = []
             for epsilon in epsilon_list:

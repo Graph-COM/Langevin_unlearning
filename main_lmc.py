@@ -103,9 +103,9 @@ class Runner():
                     X_train_removed, y_train_removed = self.get_removed_data(num_remove)
                     accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, self.args.sigma, None)
                     np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_scratch_Dnew_remove'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
-                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][1], self.args.sigma, w_list)
+                    accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove][epsilon], self.args.sigma, w_list)
                     np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/acc_finetune_remove'+str(num_remove)+'.npy', accuracy_finetune)
-                    K_list.append(K_dict[num_remove][1])
+                    K_list.append(K_dict[num_remove][epsilon])
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/K_list.npy', K_list)
         elif self.args.paint_utility_epsilon:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
