@@ -95,7 +95,7 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
             # calculate K
             epsilon_list = [0.5, 1, 2] # set epsilon = 1
-            K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, num_remove_list)
             for epsilon_idx, epsilon in enumerate(epsilon_list):
                 K_list = []
                 for num_remove in num_remove_list:
@@ -114,7 +114,7 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D.npy', accuracy_scratch_D)
             # calculate K
-            K_dict, _ = self.search_finetune_step(epsilon_list, num_remove_list)
+            K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, num_remove_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/K_list.npy', K_dict)
             for remove_idx, num_remove in enumerate(num_remove_list):
                 K_list = []
@@ -127,10 +127,7 @@ class Runner():
         elif self.args.paint_unlearning_sigma:
             num_remove_list = [1000]
             epsilon_list = [1]
-            K_dict, alpha_dict = self.search_finetune_step(epsilon_list, num_remove_list)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/K_dict.npy', K_dict)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/alpha_dict.npy', alpha_dict)
-            alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
+            
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
             scratch_acc_list = []
             scratch_unlearn_list = []
@@ -138,6 +135,10 @@ class Runner():
             epsilon0_list = []
             X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
             for sigma in sigma_list:
+                K_dict, alpha_dict = self.search_finetune_step(sigma, epsilon_list, num_remove_list)
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/K_dict'+str(sigma)+'.npy', K_dict)
+                np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/alpha_dict'+str(sigma)+'.npy', alpha_dict)
+                alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
                 epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
                 epsilon0_list.append(epsilon0)
                 accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, sigma, None, len_list = 1, return_w = True)
@@ -149,6 +150,21 @@ class Runner():
                 accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
+        elif self.args.how_much_retrain == 1:
+            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            if self.args.dataset == 'MNIST':
+                K_list = [2151, 1901, 1641, 1301, 1031]
+            elif self.args.dataset =='CIFAR10':
+                K_list = [2481, 2201, 1921, 1541, 1251]
+            num_remove_list = [1000]
+            X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
+            create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/retrain/')
+            for sigma_idx, sigma in enumerate(sigma_list):
+                accuracy_scratch_D, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_list[sigma_idx], sigma, None, len_list = 1)
+                np.save('./result/LMC/'+str(self.args.dataset)+'/retrain/'+str(sigma)+'_acc_scratch_D.npy', accuracy_scratch_D)
+                print('sigma:'+str(sigma))
+                print('mean acc:'+str(np.mean(accuracy_scratch_D)))
+                print('std acc:'+str(np.std(accuracy_scratch_D)))
         else:
             print('check!')
 
@@ -172,7 +188,7 @@ class Runner():
         epsilon = part_1 * part_2 + part_3
         return epsilon
     
-    def search_finetune_step(self, epsilon_list, num_remove_list):
+    def search_finetune_step(self, sigma, epsilon_list, num_remove_list):
         C_lsi = 2 * self.args.sigma**2 / self.m
         K_dict = {}
         alpha_dict = {}
@@ -181,11 +197,11 @@ class Runner():
             alpha_list = {}
             for target_epsilon in epsilon_list:
                 K = 1
-                epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
+                epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                 min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
                 while min_epsilon_with_k.fun > target_epsilon:
                     K = K + 10
-                    epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, self.args.sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
+                    epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
                     min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
                 K_list[target_epsilon] = K
                 alpha_list[target_epsilon] = min_epsilon_with_k.x
@@ -292,12 +308,16 @@ def main():
     parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
     parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
+    parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
     args = parser.parse_args()
     print(args)
 
     runner = Runner(args)
     runner.get_metadata()
+
     runner.train()
+
+
 
 
 if __name__ == '__main__':
