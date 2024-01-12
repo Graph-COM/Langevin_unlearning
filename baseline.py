@@ -64,27 +64,128 @@ class Runner():
         self.delta = 1 / self.n
         print('RDP constant delta:'+str(self.delta))
 
+    def sequential2(self):
+        num_remove_list = [1000]
+        num_remove_per_itr_list = [25, 50, 100]
+        target_epsilon = 1
+        create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/sequential2/')
+        baseline_step_size = 2 / (self.L + self.m)
+
+        baseline_I_factor_list = [1, 1.5, 2]
+
+        for baseline_I_factor in baseline_I_factor_list:
+            # first run the baseline, sequentially delete
+            baseline_learn_scratch_acc, mean_time, baseline_w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_acc_scratch'+str(baseline_I_factor)+'.npy', baseline_learn_scratch_acc)
+            print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
+            print('baseline learn scratch acc std: ' + str(np.std(baseline_learn_scratch_acc)))
+
+            min_I = self.get_baseline_min_I(target_epsilon)
+            print('min I:'+str(min_I))
+
+            term1 = int(min_I * baseline_I_factor)
+            baseline_k_list = []
+            for baseline_step in range(1, num_remove_list[0]+1):
+                X_train_removed, y_train_removed = self.get_removed_data(int((baseline_step)))
+                term2 = self.get_baseline_term2(baseline_step)
+                baseline_k = term1 + term2
+                baseline_k_list.append(baseline_k)
+                print('step:'+str(baseline_step)+'k:'+str(baseline_k))
+                
+                _, mean_time, baseline_w_list = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, baseline_k, baseline_w_list, len_list = 1, return_w = True)
+                baseline_sigma = self.calculate_baseline_sigma2(baseline_k, epsilon = target_epsilon)
+                print('baseline sigma: ' + str(baseline_sigma))
+                random_noise = np.random.normal(0, baseline_sigma, (100, 1, self.dim_w))
+                baseline_w_list = torch.tensor(baseline_w_list + random_noise).float()
+                baseline_unlearn_finetune_acc_list = []
+                for i in range(100):
+                    accuracy = self.test_accuracy(baseline_w_list[i])
+                    baseline_unlearn_finetune_acc_list.append(accuracy)
+                print('baseline step:'+str(baseline_step)+'acc:'+str(np.mean(baseline_unlearn_finetune_acc_list)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_acc_Ifac_'+str(baseline_I_factor)+'_step_'+str(baseline_step)+'.npy', baseline_unlearn_finetune_acc_list)
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_k_Ifac_'+str(baseline_I_factor)+'.npy', baseline_k_list)
+            print('baseline k:'+str(baseline_k_list))
+        
+        this_sigma = 0.001
+        for num_remove_per_itr in num_remove_per_itr_list:
+            lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, this_sigma, None, len_list = 1, return_w = True)
+            print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+            print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/lmc_acc_scratch'+str(num_remove_per_itr)+'.npy', lmc_learn_scratch_acc)
+            num_step = int(num_remove_list[0]/num_remove_per_itr)
+            alpha_list = []
+            self.k_list = np.zeros(num_step+1).astype(int)
+            # first get k for step 1 as warm start
+            k_1 = 1
+            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            while min_epsilon_s1_k1.fun > target_epsilon:
+                k_1 = k_1 + 1
+                epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            # set k_1 in the list
+            self.k_list[1] = k_1
+            alpha_list.append(min_epsilon_s1_k1.x)
+
+            if num_step > 1:
+                for step in tqdm(range(2,num_step+1)):
+                    # here step start from 1. k_list[0] = 0 always
+                    self.k_list[step] = 1
+                    epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                    while min_epsilon_sstep_kstep.fun > target_epsilon:
+                        self.k_list[step] = self.k_list[step] + 1
+                        epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/'+'k_list_nr'+str(num_remove_per_itr)+'.npy', self.k_list)
+            print('lmc nr:'+str(num_remove_per_itr)+'k_list:'+str(self.k_list))
+            # accumulate k
+            accumulate_k = np.cumsum(self.k_list)
+            print(accumulate_k)
+            for lmc_step, lmc_k in enumerate(self.k_list):
+                X_train_removed, y_train_removed = self.get_removed_data(int((lmc_step+1)*num_remove_per_itr))
+                lmc_unlearn_finetune_acc, mean_time, lmc_w_list = self.get_mean_performance(X_train_removed, y_train_removed, lmc_k, this_sigma, lmc_w_list, len_list = 1, return_w = True)
+                print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
+                print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/lmc_acc_finetune_nr'+str(num_remove_per_itr)+'_step'+str(lmc_step)+'.npy', lmc_unlearn_finetune_acc)
+
+
+    def get_baseline_term2(self, i):
+        gamma = (self.L - self.m) / (self.L + self.m)
+        term2 = math.log(math.log((4 * self.dim_w * i) / self.delta)) / (math.log(1 / gamma))
+        return math.ceil(term2)
+    def get_baseline_min_I(self, target_epsilon):
+        gamma = (self.L - self.m) / (self.L + self.m)
+        part_1 = math.sqrt(2 * self.dim_w) * (1-gamma)**(-1)
+        part_2 = math.sqrt(2 * math.log(2 / self.delta) + target_epsilon) - math.sqrt(2 * math.log(2 / self.delta))
+        numerator = math.log(part_1 / part_2)
+        dominator = math.log( 1 / gamma)
+        return math.ceil(numerator / dominator)
+    def calculate_baseline_sigma2(self, I, epsilon):
+        gamma = (self.L - self.m) / (self.L + self.m)
+        numerator = 8 * self.M * gamma**I
+        part_1 = self.m * self.n * (1 - gamma**I)
+        part_2 = math.sqrt(2 * math.log(2 / self.delta) + 3 * epsilon) - math.sqrt(2 * math.log(2 / self.delta) + 2 * epsilon)
+        dominator = part_1 * part_2
+        return numerator / dominator
+
     def sequential(self):
-        num_remove_list = [100]
-        num_remove_per_itr_list = [5, 10, 20]
+        num_remove_list = [1000]
+        num_remove_per_itr_list = [1000]
         target_epsilon = 1
         create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/sequential/')
 
         baseline_step_size = 2 / (self.L + self.m)
-        # first run the baseline, sequentially delete
-        baseline_learn_scratch_acc, mean_time, baseline_w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
-        np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/baseline_acc_scratch.npy', baseline_learn_scratch_acc)
-        print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
-        print('baseline learn scratch acc std: ' + str(np.std(baseline_learn_scratch_acc)))
 
-        lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
-        print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
-        print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
-        np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/lmc_acc_scratch.npy', lmc_learn_scratch_acc)
-
-        baseline_k_list = [1, 5, 10]
+        baseline_k_list = [1, 4, 5]
         for baseline_k in baseline_k_list:
-            for baseline_step in range(100):
+            # first run the baseline, sequentially delete
+            baseline_learn_scratch_acc, mean_time, baseline_w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/baseline_acc_scratch'+str(baseline_k)+'.npy', baseline_learn_scratch_acc)
+            print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
+            print('baseline learn scratch acc std: ' + str(np.std(baseline_learn_scratch_acc)))
+
+            for baseline_step in range(num_remove_list[0]):
                 X_train_removed, y_train_removed = self.get_removed_data(int((baseline_step+1)))
                 _, mean_time, baseline_w_list = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, baseline_k, baseline_w_list, len_list = 1, return_w = True)
                 baseline_sigma = self.calculate_baseline_sigma(baseline_k, epsilon = target_epsilon)
@@ -96,11 +197,12 @@ class Runner():
                     accuracy = self.test_accuracy(w_list_new_totest[i])
                     baseline_unlearn_finetune_acc_list.append(accuracy)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/baseline_acc_k_'+str(baseline_k)+'_step_'+str(baseline_step)+'.npy', baseline_unlearn_finetune_acc_list)
-        
-        print('baseline finished')
-        import pdb; pdb.set_trace()
 
         for num_remove_per_itr in num_remove_per_itr_list:
+            lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
+            print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+            print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/lmc_acc_scratch'+str(num_remove_per_itr)+'.npy', lmc_learn_scratch_acc)
             num_step = int(num_remove_list[0]/num_remove_per_itr)
             alpha_list = []
             self.k_list = np.zeros(num_step+1).astype(int)
@@ -116,15 +218,16 @@ class Runner():
             self.k_list[1] = k_1
             alpha_list.append(min_epsilon_s1_k1.x)
 
-            for step in tqdm(range(2,num_step+1)):
-                # here step start from 1. k_list[0] = 0 always
-                self.k_list[step] = 1
-                epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
-                min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
-                while min_epsilon_sstep_kstep.fun > target_epsilon:
-                    self.k_list[step] = self.k_list[step] + 1
+            if num_step > 1:
+                for step in tqdm(range(2,num_step+1)):
+                    # here step start from 1. k_list[0] = 0 always
+                    self.k_list[step] = 1
                     epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
                     min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                    while min_epsilon_sstep_kstep.fun > target_epsilon:
+                        self.k_list[step] = self.k_list[step] + 1
+                        epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
+                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
             np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/'+'k_list_nr'+str(num_remove_per_itr)+'.npy', self.k_list)
             # accumulate k
             accumulate_k = np.cumsum(self.k_list)
@@ -139,21 +242,24 @@ class Runner():
         #sns.lineplot(x=np.arange(num_remove_per_itr, num_remove_list[0]+1, num_remove_per_itr), y=accumulate_k[1:], label='num remove per itr: '+str(num_remove_per_itr), marker = 'o')
         #plt.legend()
         #plt.savefig('./cum_k.pdf')
-    
+    def epsilon0_(self, alpha, S, sigma):
+        epsilon0 = (4 * alpha * float(S)**2 * float(self.M)**2) / (float(self.m) * float(sigma)**2 * float(self.n)**2)
+        return epsilon0
     def epsilon_s1(self, alpha, k, S, sigma):
         epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
-        return math.exp(- (1/alpha) * self.eta * self.m * k) * (2 * epsilon0 * (alpha - 0.5))
+        return math.exp(- (1/alpha) * self.eta * self.m * k) * (self.epsilon0_(alpha, S, sigma))
 
     def epsilon_s_with_alpha(self, alpha, S, sigma, step):
         # every time call this function, the k_list[step - 1], step > 1 must be greater than 0
         if step == 1:
             # the first step
             epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
-            return math.exp(- (1/alpha) * self.eta * self.m * self.k_list[1]) * (2 * epsilon0 * (alpha - 0.5))
+            return math.exp(- (1/alpha) * self.eta * self.m * self.k_list[1]) * (self.epsilon0_(alpha, S, sigma))
         else:
             part1 = math.exp(- (1/alpha) * self.eta * self.m * self.k_list[step])
             step = step - 1
-            part2 = 2 * ((4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)) * (alpha - 0.5) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
+            #part2 = 2 * ((4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)) * (alpha - 0.5) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
+            part2 = self.epsilon0_(2*alpha - 1, S, sigma) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
             return part1 * part2
 
     def train(self):
@@ -195,19 +301,19 @@ class Runner():
                 num_remove_list = [1]
                 if target_k == 1:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.1872, 0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+                        sigma_list = [0.1872, 0.094, 0.00019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.2431, 0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
+                        sigma_list = [0.2431, 0.122, 0.025, 0.000125, 0.0064, 0.0028] # sigma list for CIFAR10
                 elif target_k == 2:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.18714501953125, 0.09368591346136476, 0.018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
+                        sigma_list = [0.18714501953125, 0.09368591346136476, 0.00018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.24309802246093754, 0.12169189471997069, 0.02457275474243164, 0.012432862245239257, 0.006353760723266601, 0.002700806646057129]
+                        sigma_list = [0.24309802246093754, 0.12169189471997069, 0.02457275474243164, 0.00012432862245239257, 0.006353760723266601, 0.002700806646057129]
                 elif target_k == 5:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.18709939575195314, 0.09364013709448243, 0.018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
+                        sigma_list = [0.18709939575195314, 0.09364013709448243, 0.00018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.24304327392578123, 0.1216369630797119, 0.024517823102172855, 0.012377930604980467, 0.006317139629760741, 0.002655030279174805]
+                        sigma_list = [0.24304327392578123, 0.1216369630797119, 0.024517823102172855, 0.00012377930604980467, 0.006317139629760741, 0.002655030279174805]
                 else:
                     # for unseen target k, search it here
                     sigma_list = []
@@ -411,7 +517,30 @@ class Runner():
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
         return w_list, end_time - start_time
-
+    
+    def try__(self):
+        self.k_list = np.zeros(21).astype(int)
+        num_remove_per_itr = 50
+        target_epsilon = 1
+        # first get k for step 1 as warm start
+        k_1 = 1
+        epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.0001) + (math.log(1 / float(self.delta))) / (alpha - 1)
+        min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+        while min_epsilon_s1_k1.fun > target_epsilon:
+            k_1 = k_1 + 1
+            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.0001) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+        # set k_1 in the list
+        self.k_list[1] = k_1
+        for step in range(2, 21):
+            self.k_list[step] = 1
+            epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.0001, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+            while min_epsilon_sstep_kstep.fun > target_epsilon:
+                self.k_list[step] = self.k_list[step] + 1
+                epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.0001, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+        import pdb; pdb.set_trace()
 def main():
     parser = argparse.ArgumentParser(description='Training a removal-enabled linear model and testing removal')
     parser.add_argument('--data-dir', type=str, default='./data', help='data directory')
@@ -435,19 +564,21 @@ def main():
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--run_baseline', type = int, default = 1, help = 'run the baseline')
     parser.add_argument('--sequential', type = int, default = 0, help = 'whether test sequential unlearning')
+    parser.add_argument('--sequential2', type = int, default = 0, help = 'new baseline bound')
     parser.add_argument('--find_k', type = int, default = 0, help = 'find the k')
     args = parser.parse_args()
     print(args)
 
     runner = Runner(args)
     runner.get_metadata()
+
     # here requires to find sigma by hand
     #runner.find_sigma()
     if args.sequential == 1:
         runner.sequential()
     elif args.find_k == 1:
         target_k_list = [1, 2, 5]
-        #epsilon_list = [0.01, 0.05, 0.1, 0.5, 1, 2, 5]
+        #epsilon_list = [0.0001, 0.05, 0.1, 0.5, 1, 2, 5]
         epsilon_list = [0.05]
         for target_k in target_k_list:
             result_list = []
@@ -456,6 +587,8 @@ def main():
                 result_list.append(result_sigma)
             print('target k:'+str(target_k))
             print(result_list)
+    elif args.sequential2 == 1:
+        runner.sequential2()
 
     else:
         runner.train()
