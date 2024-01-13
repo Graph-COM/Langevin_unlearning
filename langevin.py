@@ -18,7 +18,7 @@ def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, p
             print('m not assigned, please check!')
         var = (2 * sigma**2) / m
         std = torch.sqrt(torch.tensor(var))
-        w0 = torch.normal(mean=0, std=std, size=(dim_w,)).reshape(-1).to(device)
+        w0 = torch.normal(mean=1000, std=std, size=(dim_w,)).reshape(-1).to(device)
     else:
         w0 = init_point.to(device)
     wi = w0

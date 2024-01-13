@@ -79,11 +79,11 @@ class Runner():
         if self.args.search_burnin:
             if self.args.dataset == 'MNIST':
                 # list for MNIST
-                sigma_list = [0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000]
+                sigma_list = [0.015, 0.02, 0.03]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000]
             elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 10000]
+                sigma_list = [0.015, 0.02, 0.03]
+                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000]
             elif self.args.dataset == 'SST':
                 sigma_list = [0.01, 0.05, 0.1]
                 burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000]
@@ -276,7 +276,7 @@ class Runner():
         return accuracy
     def run_unadjusted_langvin(self, init_point, X, y, burn_in, sigma, len_list, projection = 0, batch_size = 0):
         start_time = time.time()
-        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam, sigma = sigma, 
+        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, sigma = sigma, 
                                                device = self.device, potential = logistic_potential, burn_in = burn_in, 
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
@@ -296,7 +296,7 @@ def main():
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
     parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
-    parser.add_argument('--burn_in', type = int, default = 15000, help = 'burn in step number of LMC')
+    parser.add_argument('--burn_in', type = int, default = 10000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')
@@ -314,6 +314,8 @@ def main():
 
     runner = Runner(args)
     runner.get_metadata()
+
+    import pdb; pdb.set_trace()
 
     runner.train()
 

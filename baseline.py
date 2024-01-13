@@ -65,8 +65,8 @@ class Runner():
         print('RDP constant delta:'+str(self.delta))
 
     def sequential2(self):
-        num_remove_list = [1000]
-        num_remove_per_itr_list = [25, 50, 100]
+        num_remove_list = [100]
+        num_remove_per_itr_list = [5, 10, 20]
         target_epsilon = 1
         create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/sequential2/')
         baseline_step_size = 2 / (self.L + self.m)
@@ -106,7 +106,7 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_k_Ifac_'+str(baseline_I_factor)+'.npy', baseline_k_list)
             print('baseline k:'+str(baseline_k_list))
         
-        this_sigma = 0.001
+        this_sigma = 0.03
         for num_remove_per_itr in num_remove_per_itr_list:
             lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, this_sigma, None, len_list = 1, return_w = True)
             print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
@@ -429,7 +429,7 @@ class Runner():
     
     def run_gradient_descent(self, init_point, X, y, baseline_step_size, burn_in, len_list):
         start_time = time.time()
-        w_list = self.gradient_descent_algorithm(init_point, self.dim_w, X, y, self.args.lam, device = self.device, potential = logistic_potential, burn_in = burn_in, len_list = len_list, step=baseline_step_size, M = self.M)
+        w_list = self.gradient_descent_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, device = self.device, potential = logistic_potential, burn_in = burn_in, len_list = len_list, step=baseline_step_size, M = self.M)
         end_time = time.time()
         return w_list, end_time - start_time
 
@@ -512,7 +512,7 @@ class Runner():
         return accuracy
     def run_unadjusted_langvin(self, init_point, X, y, burn_in, sigma, len_list):
         start_time = time.time()
-        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam, sigma = sigma, 
+        w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, sigma = sigma, 
                                                device = self.device, potential = logistic_potential, burn_in = burn_in, 
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
@@ -520,25 +520,25 @@ class Runner():
     
     def try__(self):
         self.k_list = np.zeros(21).astype(int)
-        num_remove_per_itr = 50
+        num_remove_per_itr = 5
         target_epsilon = 1
         # first get k for step 1 as warm start
         k_1 = 1
-        epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.0001) + (math.log(1 / float(self.delta))) / (alpha - 1)
+        epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.03) + (math.log(1 / float(self.delta))) / (alpha - 1)
         min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
         while min_epsilon_s1_k1.fun > target_epsilon:
             k_1 = k_1 + 1
-            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.0001) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.03) + (math.log(1 / float(self.delta))) / (alpha - 1)
             min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
         # set k_1 in the list
         self.k_list[1] = k_1
         for step in range(2, 21):
             self.k_list[step] = 1
-            epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.0001, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.03, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
             min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
             while min_epsilon_sstep_kstep.fun > target_epsilon:
                 self.k_list[step] = self.k_list[step] + 1
-                epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.0001, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.03, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
                 min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
         import pdb; pdb.set_trace()
 def main():
@@ -571,15 +571,18 @@ def main():
 
     runner = Runner(args)
     runner.get_metadata()
+    #runner.try__()
+    #import pdb; pdb.set_trace()
+    
 
     # here requires to find sigma by hand
     #runner.find_sigma()
     if args.sequential == 1:
         runner.sequential()
     elif args.find_k == 1:
+        #import pdb; pdb.set_trace()
         target_k_list = [1, 2, 5]
-        #epsilon_list = [0.0001, 0.05, 0.1, 0.5, 1, 2, 5]
-        epsilon_list = [0.05]
+        epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
         for target_k in target_k_list:
             result_list = []
             for epsilon in epsilon_list:
