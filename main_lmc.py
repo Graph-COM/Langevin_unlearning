@@ -57,6 +57,7 @@ class Runner():
         print('number training data:'+str(self.n))
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
+        import pdb; pdb.set_trace()
         self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
         self.L = self.L
         print('L smooth constant'+str(self.L))
@@ -109,7 +110,7 @@ class Runner():
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/'+str(epsilon)+'/K_list.npy', K_list)
         elif self.args.paint_utility_epsilon:
             epsilon_list = [0.1, 0.5, 1, 2, 5]
-            num_remove_list = [10, 300, 1000]
+            num_remove_list = [1, 50, 100]
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/w_from_scratch.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/acc_scratch_D.npy', accuracy_scratch_D)
@@ -125,7 +126,7 @@ class Runner():
                     np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_epsilon/'+str(num_remove)+'/acc_finetune_epsilon'+str(epsilon)+'.npy', accuracy_finetune)
                     K_list.append(K_dict[num_remove_list[0]][epsilon])
         elif self.args.paint_unlearning_sigma:
-            num_remove_list = [1000]
+            num_remove_list = [100]
             epsilon_list = [1]
             
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
@@ -153,10 +154,10 @@ class Runner():
         elif self.args.how_much_retrain == 1:
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
             if self.args.dataset == 'MNIST':
-                K_list = [2151, 1901, 1641, 1301, 1031]
+                K_list = [1301, 1031, 751, 351, 1]
             elif self.args.dataset =='CIFAR10':
-                K_list = [2481, 2201, 1921, 1541, 1251]
-            num_remove_list = [1000]
+                K_list = [1541, 1251, 951, 521, 151]
+            num_remove_list = [100]
             X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
             create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/retrain/')
             for sigma_idx, sigma in enumerate(sigma_list):
@@ -295,7 +296,7 @@ def main():
     parser.add_argument('--M', type = float, default = 1, help = 'set M-Lipschitz constant (norm of gradient)')
 
     parser.add_argument('--gpu', type = int, default = 6, help = 'gpu')
-    parser.add_argument('--sigma', type = float, default = 0.1, help = 'the parameter sigma')
+    parser.add_argument('--sigma', type = float, default = 0.03, help = 'the parameter sigma')
     parser.add_argument('--burn_in', type = int, default = 10000, help = 'burn in step number of LMC')
     parser.add_argument('--gaussian_dim', type = int, default = 10, help = 'dimension of gaussian task')
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
@@ -315,7 +316,7 @@ def main():
     runner = Runner(args)
     runner.get_metadata()
 
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
 
     runner.train()
 

@@ -278,7 +278,7 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_scratch.npy', baseline_learn_scratch_acc)
             print('baseline unlearn scratch acc: ' + str(np.mean(baseline_unlearn_scratch_acc)))
             print('baseline unlearn scratch acc std: ' + str(np.std(baseline_unlearn_scratch_acc)))
-            
+            import pdb; pdb.set_trace()
             for target_k in target_k_list:
                 print('working on target k:'+str(target_k))
                 # first run algorithm #1 to learn and get parameters
@@ -436,7 +436,8 @@ class Runner():
     def gradient_descent_algorithm(self, init_point, dim_w, X, y, lam, device, potential, burn_in = 10000, len_list = 1, step=0.1, M = 1):
         # randomly sample from N(0, I)
         if init_point == None:
-            w0 = torch.randn(dim_w).to(device)
+            #w0 = torch.randn(dim_w).to(device)
+            w0 = torch.normal(mean=1000, std=1, size=(dim_w,)).reshape(-1).to(device)
         else:
             w0 = init_point.to(device)
         wi = w0
