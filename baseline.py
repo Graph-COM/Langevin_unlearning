@@ -301,9 +301,9 @@ class Runner():
                 num_remove_list = [1]
                 if target_k == 1:
                     if self.args.dataset == 'MNIST':
-                        sigma_list = [0.1872, 0.094, 0.00019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
+                        sigma_list = [0.1872, 0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
                     elif self.args.dataset == 'CIFAR10':
-                        sigma_list = [0.2431, 0.122, 0.025, 0.000125, 0.0064, 0.0028] # sigma list for CIFAR10
+                        sigma_list = [0.2431, 0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
                 elif target_k == 2:
                     if self.args.dataset == 'MNIST':
                         sigma_list = [0.18714501953125, 0.09368591346136476, 0.00018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
@@ -577,6 +577,7 @@ def main():
     
 
     # here requires to find sigma by hand
+    import pdb; pdb.set_trace()
     #runner.find_sigma()
     if args.sequential == 1:
         runner.sequential()
