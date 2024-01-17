@@ -57,8 +57,7 @@ class Runner():
         print('number training data:'+str(self.n))
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
-        import pdb; pdb.set_trace()
-        self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
+        self.L = 1 / 4 + self.args.lam * self.n
         self.L = self.L
         print('L smooth constant'+str(self.L))
         # m-strongly convex constant
