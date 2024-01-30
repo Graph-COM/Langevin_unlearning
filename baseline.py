@@ -118,11 +118,11 @@ class Runner():
             # first get k for step 1 as warm start
             k_1 = 1
             epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
-            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
             while min_epsilon_s1_k1.fun > target_epsilon:
                 k_1 = k_1 + 1
                 epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
             # set k_1 in the list
             self.k_list[1] = k_1
             alpha_list.append(min_epsilon_s1_k1.x)
@@ -132,11 +132,11 @@ class Runner():
                     # here step start from 1. k_list[0] = 0 always
                     self.k_list[step] = 1
                     epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
                     while min_epsilon_sstep_kstep.fun > target_epsilon:
                         self.k_list[step] = self.k_list[step] + 1
                         epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
             np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/'+'k_list_nr'+str(num_remove_per_itr)+'.npy', self.k_list)
             print('lmc nr:'+str(num_remove_per_itr)+'k_list:'+str(self.k_list))
             # accumulate k
@@ -209,11 +209,11 @@ class Runner():
             # first get k for step 1 as warm start
             k_1 = 1
             epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, self.args.sigma)
-            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
             while min_epsilon_s1_k1.fun > target_epsilon:
                 k_1 = k_1 + 1
                 epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, self.args.sigma)
-                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
             # set k_1 in the list
             self.k_list[1] = k_1
             alpha_list.append(min_epsilon_s1_k1.x)
@@ -223,11 +223,11 @@ class Runner():
                     # here step start from 1. k_list[0] = 0 always
                     self.k_list[step] = 1
                     epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
-                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
                     while min_epsilon_sstep_kstep.fun > target_epsilon:
                         self.k_list[step] = self.k_list[step] + 1
                         epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, self.args.sigma, step)
-                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
             np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/'+'k_list_nr'+str(num_remove_per_itr)+'.npy', self.k_list)
             # accumulate k
             accumulate_k = np.cumsum(self.k_list)
@@ -258,8 +258,7 @@ class Runner():
         else:
             part1 = math.exp(- (1/alpha) * self.eta * self.m * self.k_list[step])
             step = step - 1
-            #part2 = 2 * ((4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)) * (alpha - 0.5) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
-            part2 = self.epsilon0_(2*alpha - 1, S, sigma) + (alpha - 0.5) / (alpha - 1) * self.epsilon_s_with_alpha(2*alpha, S, sigma, step)
+            part2 = (alpha - 0.5) / (alpha - 1) * (self.epsilon0_(2*alpha, S, sigma) + self.epsilon_s_with_alpha(2*alpha, S, sigma, step))
             return part1 * part2
 
     def train(self):
@@ -493,11 +492,11 @@ class Runner():
             for target_epsilon in epsilon_list:
                 K = 1
                 epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
-                min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
+                min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(2, 10000), method='bounded')
                 while min_epsilon_with_k.fun > target_epsilon:
                     K = K + 1
                     epsilon_of_alpha = lambda alpha: self.epsilon_expression(K, sigma, self.eta, C_lsi, alpha, num_remove, self.M, self.m, self.n, self.delta)
-                    min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(1, 10000), method='bounded')
+                    min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(2, 10000), method='bounded')
                 K_list[target_epsilon] = K
                 alpha_list[target_epsilon] = min_epsilon_with_k.x
                 #print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
@@ -526,21 +525,21 @@ class Runner():
         # first get k for step 1 as warm start
         k_1 = 1
         epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.03) + (math.log(1 / float(self.delta))) / (alpha - 1)
-        min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+        min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
         while min_epsilon_s1_k1.fun > target_epsilon:
             k_1 = k_1 + 1
             epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, 0.03) + (math.log(1 / float(self.delta))) / (alpha - 1)
-            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(1, 100000), method='bounded')
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
         # set k_1 in the list
         self.k_list[1] = k_1
         for step in range(2, 21):
             self.k_list[step] = 1
             epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.03, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
-            min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+            min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
             while min_epsilon_sstep_kstep.fun > target_epsilon:
                 self.k_list[step] = self.k_list[step] + 1
                 epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, 0.03, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
-                min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(1, 100000), method='bounded')
+                min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
         import pdb; pdb.set_trace()
 def main():
     parser = argparse.ArgumentParser(description='Training a removal-enabled linear model and testing removal')
