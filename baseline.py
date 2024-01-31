@@ -126,7 +126,7 @@ class Runner():
             # set k_1 in the list
             self.k_list[1] = k_1
             alpha_list.append(min_epsilon_s1_k1.x)
-
+            
             if num_step > 1:
                 for step in tqdm(range(2,num_step+1)):
                     # here step start from 1. k_list[0] = 0 always
@@ -576,7 +576,6 @@ def main():
     
 
     # here requires to find sigma by hand
-    import pdb; pdb.set_trace()
     #runner.find_sigma()
     if args.sequential == 1:
         runner.sequential()
