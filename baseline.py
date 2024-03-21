@@ -411,7 +411,7 @@ class Runner():
         end_time = time.time()
         return w_list, end_time - start_time
 
-    def gradient_descent_algorithm(self, init_point, dim_w, X, y, lam, device, potential, burn_in = 10000, len_list = 1, step=0.1, M = 1):
+    def gradient_descent_algorithm(self, init_point, dim_w, X, y, lam, device, burn_in = 10000, len_list = 1, step=0.1, M = 1):
         # randomly sample from N(0, I)
         if init_point == None:
             #w0 = torch.randn(dim_w).to(device)
