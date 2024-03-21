@@ -260,7 +260,6 @@ class Runner():
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_unlearn_scratch.npy', baseline_learn_scratch_acc)
             print('baseline unlearn scratch acc: ' + str(np.mean(baseline_unlearn_scratch_acc)))
             print('baseline unlearn scratch acc std: ' + str(np.std(baseline_unlearn_scratch_acc)))
-            import pdb; pdb.set_trace()
             for target_k in target_k_list:
                 print('working on target k:'+str(target_k))
                 # first run algorithm #1 to learn and get parameters
@@ -541,24 +540,17 @@ def main():
     parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
     parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--run_baseline', type = int, default = 1, help = 'run the baseline')
-    parser.add_argument('--sequential', type = int, default = 0, help = 'whether test sequential unlearning')
-    parser.add_argument('--sequential2', type = int, default = 0, help = 'new baseline bound')
+    parser.add_argument('--sequential2', type = int, default = 0, help = 'whether test sequential unlearning')
     parser.add_argument('--find_k', type = int, default = 0, help = 'find the k')
     args = parser.parse_args()
     print(args)
 
     runner = Runner(args)
     runner.get_metadata()
-    #runner.try__()
-    #import pdb; pdb.set_trace()
     
-
-    # here requires to find sigma by hand
-    #runner.find_sigma()
-    if args.sequential == 1:
-        runner.sequential()
-    elif args.find_k == 1:
-        #import pdb; pdb.set_trace()
+    if args.find_k == 1:
+        # here may require to find sigma by hand
+        # please use runner.try__() to manually search for better sigma when k = 1
         target_k_list = [1, 2, 5]
         epsilon_list = [0.05, 0.1, 0.5, 1, 2, 5]
         for target_k in target_k_list:

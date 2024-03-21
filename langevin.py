@@ -8,9 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
-# below is the slow version of per sample gradient
-# on Dec 30: add clip the weight after each update, (projection function)
 def unadjusted_langevin_algorithm(init_point, dim_w, X, y, lam, sigma, device, burn_in = 10000, len_list = 1, step=0.1, M = 1, m = 0, projection = None, batch_size = None):
     # randomly sample from N(0, C_lsi)
     if init_point == None:

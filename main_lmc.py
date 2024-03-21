@@ -55,7 +55,8 @@ class Runner():
         
     def train(self):
         if self.args.paint_utility_s:
-            num_remove_list = [1, 10, 50, 100, 500, 1000]
+            # this is to paint the utilisy - s figure
+            num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/learn_scratch_w.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
