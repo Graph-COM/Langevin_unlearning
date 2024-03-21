@@ -2,25 +2,15 @@ from hmac import new
 import time
 import numpy as np
 import argparse
-import os
-from sklearn.linear_model import LogisticRegression
-from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
 from scipy.optimize import minimize_scalar
-import sympy as sp
-import re
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms
 
-from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian, create_nested_folder
+from utils import load_features, generate_gaussian, create_nested_folder
 from langevin import unadjusted_langevin_algorithm
-from density import logistic_density, logistic_potential
 
 
 class Runner():
@@ -33,16 +23,6 @@ class Runner():
         elif args.dataset == 'CIFAR10':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.dim_w = 512
-        elif args.dataset == 'SST':
-            self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
-            self.dim_w = 768
-        elif args.dataset == '2dgaussian':
-            mean_1 = torch.tensor([-2, -2])
-            mean_2 = torch.tensor([2, 2])
-            std = torch.tensor([1, 1])
-            self.X_train, self.y_train = generate_gaussian(2, 10000, mean_1, mean_2, std)
-            self.X_test, self.y_test = generate_gaussian(2, 1000, mean_1, mean_2, std)
-            self.dim_w = 2
         # make the norm of x = 1, MNIST naturally satisfys
         self.X_train_norm = self.X_train.norm(dim=1, keepdim=True)
         self.X_train = self.X_train / self.X_train_norm
@@ -51,7 +31,6 @@ class Runner():
         self.X_train = self.X_train.to(self.device)
         self.y_train = self.y_train.to(self.device)
     def get_metadata(self):
-        # note here the loss function here all times 100 than before
         # num of training data
         self.n = len(self.X_train)
         print('number training data:'+str(self.n))
@@ -68,7 +47,6 @@ class Runner():
         self.M = self.args.M
         print('M lipschitz constant:'+str(self.M))
         # calculate step size
-        #max_eta = min( 1 / self.m, 2 / self.L) 
         self.eta = 1 / self.L
         print('step size eta:'+str(self.eta))
         # calculate RDP delta
@@ -76,25 +54,13 @@ class Runner():
         print('RDP constant delta:'+str(self.delta))
         
     def train(self):
-        if self.args.search_burnin:
-            if self.args.dataset == 'MNIST':
-                # list for MNIST
-                sigma_list = [0.015, 0.02, 0.03]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000]
-            elif self.args.dataset == 'CIFAR10':
-                sigma_list = [0.015, 0.02, 0.03]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000, 5000, 7500, 10000]
-            elif self.args.dataset == 'SST':
-                sigma_list = [0.01, 0.05, 0.1]
-                burn_in_list = [1, 10, 20, 50, 100, 150, 200, 300, 500, 1000, 2000, 3000]
-            _ = self.search_burnin(sigma_list, burn_in_list)
-        elif self.args.paint_utility_s:
+        if self.args.paint_utility_s:
             num_remove_list = [1, 10, 50, 100, 500, 1000]
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/learn_scratch_w.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
             # calculate K
-            epsilon_list = [0.5, 1, 2] # set epsilon = 1
+            epsilon_list = [0.5, 1, 2]
             K_dict, _ = self.search_finetune_step(self.args.sigma, epsilon_list, num_remove_list)
             for epsilon_idx, epsilon in enumerate(epsilon_list):
                 K_list = []
@@ -150,21 +116,6 @@ class Runner():
                 accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
-        elif self.args.how_much_retrain == 1:
-            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
-            if self.args.dataset == 'MNIST':
-                K_list = [1301, 1031, 751, 351, 1]
-            elif self.args.dataset =='CIFAR10':
-                K_list = [1541, 1251, 951, 521, 151]
-            num_remove_list = [100]
-            X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
-            create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/retrain/')
-            for sigma_idx, sigma in enumerate(sigma_list):
-                accuracy_scratch_D, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_list[sigma_idx], sigma, None, len_list = 1)
-                np.save('./result/LMC/'+str(self.args.dataset)+'/retrain/'+str(sigma)+'_acc_scratch_D.npy', accuracy_scratch_D)
-                print('sigma:'+str(sigma))
-                print('mean acc:'+str(np.mean(accuracy_scratch_D)))
-                print('std acc:'+str(np.std(accuracy_scratch_D)))
         else:
             print('check!')
 
@@ -241,32 +192,6 @@ class Runner():
             return trial_list, mean_time, new_w_list
         else:
             return trial_list, mean_time
-        
-    def search_burnin(self, sigma_list, burn_in_list, fig_path = '_search_burnin.pdf'):
-        acc_dict = {}
-        for sigma in sigma_list:
-            acc_list = []
-            this_w_list = None
-            for idx in range(len(burn_in_list)):
-                if idx == 0:
-                    step = burn_in_list[idx]
-                else:
-                    step = burn_in_list[idx] - burn_in_list[idx - 1]
-                accuracy, _, new_w_list = self.get_mean_performance(self.X_train, self.y_train, step, sigma, this_w_list, return_w = True)
-                this_w_list = new_w_list
-                acc_list.append(np.mean(accuracy))
-                print(acc_list)
-            plt.plot(burn_in_list, acc_list, label='sigma :'+str(sigma))
-            acc_dict[sigma] = acc_list
-            for i in range(len(burn_in_list)):
-                plt.text(burn_in_list[i], acc_list[i], f'{acc_list[i]:.3f}', ha='right', va='bottom')
-        plt.legend()
-        plt.title(str(self.args.dataset)+'search burn in')
-        plt.xlabel('burn in steps')
-        plt.ylabel('accuracy')
-        plt.savefig(str(self.args.dataset)+fig_path)
-        plt.clf()
-        return acc_dict
                 
     def test_accuracy(self, w_list):
         w = torch.tensor(w_list[0])
@@ -277,7 +202,7 @@ class Runner():
     def run_unadjusted_langvin(self, init_point, X, y, burn_in, sigma, len_list, projection = 0, batch_size = 0):
         start_time = time.time()
         w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, sigma = sigma, 
-                                               device = self.device, potential = logistic_potential, burn_in = burn_in, 
+                                               device = self.device, burn_in = burn_in, 
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
         return w_list, end_time - start_time
@@ -301,26 +226,16 @@ def main():
     parser.add_argument('--len_list', type = int, default = 10000, help = 'length of w to paint in 2D gaussian')
     parser.add_argument('--finetune_step', type = int, default = 50, help = 'steps to finetune on the new removed data')
 
-
-    parser.add_argument('--search_burnin', type = int, default = 0, help = 'whether grid search to paint for burn-in')
-    parser.add_argument('--search_finetune', type = int, default = 0, help = 'whether to grid search finetune')
-    parser.add_argument('--search_burnin_newdata', type = int, default = 0, help = 'search burn in on new data')
     parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
     parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
-    parser.add_argument('--how_much_retrain', type = int, default = 0, help = 'supplementary for unlearning sigma')
     args = parser.parse_args()
     print(args)
 
     runner = Runner(args)
     runner.get_metadata()
 
-    #import pdb; pdb.set_trace()
-
     runner.train()
-
-
-
 
 if __name__ == '__main__':
     main()

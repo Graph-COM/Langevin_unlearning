@@ -2,24 +2,14 @@ from hmac import new
 import time
 import numpy as np
 import argparse
-import os
-from sklearn.linear_model import LogisticRegression
-from prettytable import PrettyTable
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 import math
 from scipy.optimize import minimize_scalar
-import seaborn as sns
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms
 
-from utils import load_features, generate_gaussian, plot_2dgaussian, plot_w_2dgaussian, create_nested_folder
+from utils import load_features, create_nested_folder
 from langevin import unadjusted_langevin_algorithm
-from density import logistic_density, logistic_potential
 
 
 class Runner():
@@ -45,7 +35,7 @@ class Runner():
         print('number training data:'+str(self.n))
         # L-smoothness constant
         X = self.X_train.cpu().numpy()
-        self.L = np.max(np.linalg.eigvalsh(X.T @ X / self.n)) / 4 + self.args.lam * self.n
+        self.L = 1/4 + self.args.lam * self.n
         self.L = self.L
         print('L smooth constant'+str(self.L))
         # m-strongly convex constant
@@ -56,8 +46,6 @@ class Runner():
         self.M = self.args.M
         print('M lipschitz constant:'+str(self.M))
         # calculate step size
-        #max_eta = min( 2 * (1 - (self.m / 2)*(1/self.L + 1/self.m)) * (1/self.L + 1/self.m), 2 / (self.L + self.m) ) 
-        #self.eta = min(max_eta, 1)
         self.eta = 1 / self.L
         print('step size eta:'+str(self.eta))
         # calculate RDP delta
@@ -239,21 +227,16 @@ class Runner():
                 print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
                 np.save('./result/LMC/'+str(self.args.dataset)+'/sequential/lmc_acc_finetune_nr'+str(num_remove_per_itr)+'_step'+str(lmc_step)+'.npy', lmc_unlearn_finetune_acc)
             
-        #sns.lineplot(x=np.arange(num_remove_per_itr, num_remove_list[0]+1, num_remove_per_itr), y=accumulate_k[1:], label='num remove per itr: '+str(num_remove_per_itr), marker = 'o')
-        #plt.legend()
-        #plt.savefig('./cum_k.pdf')
     def epsilon0_(self, alpha, S, sigma):
         epsilon0 = (4 * alpha * float(S)**2 * float(self.M)**2) / (float(self.m) * float(sigma)**2 * float(self.n)**2)
         return epsilon0
     def epsilon_s1(self, alpha, k, S, sigma):
-        epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
         return math.exp(- (1/alpha) * self.eta * self.m * k) * (self.epsilon0_(alpha, S, sigma))
 
     def epsilon_s_with_alpha(self, alpha, S, sigma, step):
         # every time call this function, the k_list[step - 1], step > 1 must be greater than 0
         if step == 1:
             # the first step
-            epsilon0 = (4 * alpha * S**2 * self.M**2) / (self.m * sigma**2 * self.n**2)
             return math.exp(- (1/alpha) * self.eta * self.m * self.k_list[1]) * (self.epsilon0_(alpha, S, sigma))
         else:
             part1 = math.exp(- (1/alpha) * self.eta * self.m * self.k_list[step])
@@ -353,9 +336,6 @@ class Runner():
                 upper = mid
             else:
                 lower = mid
-            '''print(lower)
-            print(upper)
-            print(k)'''
             
 
     def calculate_k_with_sigma(self, epsilon, sigma):
@@ -428,7 +408,7 @@ class Runner():
     
     def run_gradient_descent(self, init_point, X, y, baseline_step_size, burn_in, len_list):
         start_time = time.time()
-        w_list = self.gradient_descent_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, device = self.device, potential = logistic_potential, burn_in = burn_in, len_list = len_list, step=baseline_step_size, M = self.M)
+        w_list = self.gradient_descent_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, device = self.device, burn_in = burn_in, len_list = len_list, step=baseline_step_size, M = self.M)
         end_time = time.time()
         return w_list, end_time - start_time
 
@@ -475,7 +455,6 @@ class Runner():
         return numerator / dominator
     
     def epsilon_expression(self, K, sigma, eta, C_lsi, alpha, S, M, m, n, delta):
-        #part_1 = math.exp(- (2 * float(K) * float(sigma) **2 * float(eta)) / (alpha * float(C_lsi)))
         part_1 = math.exp(- (float(K) * m * float(eta)) / (alpha))
         part_2 = (4 * alpha * float(S)**2 * float(M)**2) / (float(m) * float(sigma)**2 * float(n)**2)
         part_3 = (math.log(1 / float(delta))) / (alpha - 1)
@@ -499,7 +478,6 @@ class Runner():
                     min_epsilon_with_k = minimize_scalar(epsilon_of_alpha, bounds=(2, 10000), method='bounded')
                 K_list[target_epsilon] = K
                 alpha_list[target_epsilon] = min_epsilon_with_k.x
-                #print('num remove:'+str(num_remove)+'target epsilon: '+str(target_epsilon)+'K: '+str(K)+'alpha: '+str(min_epsilon_with_k.x))
             K_dict[num_remove] = K_list
             alpha_dict[num_remove] = alpha_list
         return K_dict, alpha_dict
@@ -513,7 +491,7 @@ class Runner():
     def run_unadjusted_langvin(self, init_point, X, y, burn_in, sigma, len_list):
         start_time = time.time()
         w_list = unadjusted_langevin_algorithm(init_point, self.dim_w, X, y, self.args.lam*self.n, sigma = sigma, 
-                                               device = self.device, potential = logistic_potential, burn_in = burn_in, 
+                                               device = self.device, burn_in = burn_in, 
                                                len_list = len_list, step=self.eta, M = self.M, m = self.m)
         end_time = time.time()
         return w_list, end_time - start_time
