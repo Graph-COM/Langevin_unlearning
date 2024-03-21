@@ -25,11 +25,23 @@ tqdm                            4.65.0
 python baseline.py --lam 1e-6 --dataset [MNIST/CIFAR10]
 ````
 
+* **Notes:**
+We have already calculated the lowest $\sigma$ w.r.t. target $\epsilon= \[0.05, 0.1, 0.5, 1, 2, 5\], k =\[1,2,5\]$ for MNIST and CIFAR10 (see line 285-298 in baseline.py).
+To calculate the lowest $\sigma$ w.r.t. an arbitrary $\epsilon, k$, one may run
+````
+python baseline.py --lam 1e-6 --dataset [MNIST/CIFAR10] --find_k 1
+````
+The command above could produce satisfying value of $\sigma$ when $k>1$, for $k=1$, one may further select more concise $\sigma$ value via further manual search via the try__() function (line499)
+
 ## To implement and re-produce the result in Figure 3.b, run
 
 ````
 python baseline.py --lam 1e-6 --dataset [MNIST/CIFAR10] --sequential2 1
 ````
+
+
+
+
 
 ## To implement and re-produce the result in Figure 3.c, run
 
