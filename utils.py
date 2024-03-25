@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pandas as pd
 import nltk
+import pandas
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
 
 import torch
 
@@ -15,7 +21,15 @@ from torchvision import datasets, transforms, models
 from transformers import AutoTokenizer, AutoModel
 
 
+def transform_array(arr):
+    n = len(arr)
+    
+    result = torch.full((n, 10), 0)
 
+    for i, num in enumerate(arr):
+        result[int(i), int(num.item())] = 1
+
+    return result
 
 # constructs one-hot representations of labels
 def onehot(y):
@@ -123,47 +137,72 @@ def load_features(args):
             test_indices = (y_test.eq(3) + y_test.eq(8)).gt(0)
             X_test = X_test[test_indices]
             y_test = y_test[test_indices].eq(3).float()
-        elif args.dataset == 'SST':
-            #nltk.download('punkt')
-            if not os.path.exists('./data/SST/train.pt'):
-                dataset = load_dataset("glue", "sst2")
-                model_name = 'roberta-base'
-                tokenizer = AutoTokenizer.from_pretrained(model_name)
-                '''def tokenize_function(examples):
-                    return tokenizer(examples["sentence"], padding="max_length", truncation=True)
-                tokenized_datasets = dataset.map(tokenize_function, batched=True)'''
-                model = AutoModel.from_pretrained(model_name)
+        elif args.dataset == 'CIFAR10_MULTI':
+            if not os.path.exists('./data/CIFAR10/train.pt'):
+                trainset = datasets.CIFAR10(args.data_dir, train=True, download = True, transform=cifar10_transform)
+                testset = datasets.CIFAR10(args.data_dir, train=False, download = True, transform=cifar10_transform)
+                trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=False)
+                testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False)
+                pretrained_resnet = models.resnet18(pretrained=True)
+                feature_extractor = ResNetFeatureExtractor(pretrained_resnet)
+                feature_extractor.eval()
                 train_feature = []
                 test_feature = []
                 with torch.no_grad():
-                    for row in tqdm(dataset['train']):
-                        inputs = tokenizer(row['sentence'], return_tensors="pt")
-                        outputs = model(**inputs)
-                        last_hidden_states = outputs.last_hidden_state
-                        label = row['label']
-                        train_feature.append([last_hidden_states, label])
-                    for row in tqdm(dataset['test']):
-                        inputs = tokenizer(row['sentence'], return_tensors="pt")
-                        outputs = model(**inputs)
-                        last_hidden_states = outputs.last_hidden_state
-                        label = row['label']
-                        test_feature.append([last_hidden_states, label])
-                torch.save(train_feature, './data/SST/train.pt')
-                torch.save(test_feature, './data/SST/test.pt')
+                    for inputs, labels in tqdm(trainloader):
+                        output = feature_extractor(inputs)
+                        train_feature.append([output.reshape(-1), labels])
+                    for inputs, labels in tqdm(testloader):
+                        output = feature_extractor(inputs)
+                        test_feature.append([output.reshape(-1), labels])
+                torch.save(train_feature, './data/CIFAR10/train.pt')
+                torch.save(test_feature, './data/CIFAR10/test.pt')
+                trainset = train_feature
+                testset = test_feature
             else:
-                train_feature = torch.load('./data/SST/train.pt')
-            X_train = torch.zeros(20000, 768)
-            y_train = torch.zeros(20000)
-            X_test = torch.zeros(1000, 768)
-            y_test = torch.zeros(1000)
-            for i in range(20000):
-                x, y = train_feature[i]
-                X_train[i] = torch.sum(x, dim = 1).view(768)
-                y_train[i] = y
-            for i in range(20000, 21000):
-                x, y = train_feature[i]
-                X_test[i-20000] = torch.sum(x, dim = 1).view(768)
-                y_test[i-20000] = y
+                trainset = torch.load('./data/CIFAR10/train.pt')
+                testset = torch.load('./data/CIFAR10/test.pt')
+            X_train = torch.zeros(len(trainset), 512)
+            y_train = torch.zeros(len(trainset))
+            X_test = torch.zeros(len(testset),512)
+            y_test = torch.zeros(len(testset))
+            for i in range(len(trainset)):
+                x, y = trainset[i]
+                X_train[i] = x.view(512)
+                y_train[i] = y.item()
+            for i in range(len(testset)):
+                x, y = testset[i]
+                X_test[i] = x.view(512)
+                y_test[i] = y.item()
+            y_train = transform_array(y_train).float()
+            y_test = transform_array(y_test).float()
+        elif args.dataset == 'ADULT':
+            train_data_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+            column_names = [
+                "age", "workclass", "fnlwgt", "education", "education-num", "marital-status",
+                "occupation", "relationship", "race", "sex", "capital-gain", "capital-loss",
+                "hours-per-week", "native-country", "income"
+            ]
+            numeric_features = ["age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week"]
+            #categorical_features = ["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex", "native-country"]
+            categorical_features = ["sex"]
+            # Load the training data
+            data = pandas.read_csv(train_data_url, names=column_names, sep=',\s', na_values="?", engine='python')
+            # Load the testing data
+            data['income'] = data['income'].map({'<=50K': 0, '>50K': 1})
+            X = data.drop('income', axis=1)
+            y = data['income']
+            numeric_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),('scaler', StandardScaler())])
+            categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent')),('onehot', OneHotEncoder(handle_unknown='ignore'))])
+            #preprocessor = ColumnTransformer(transformers=[('num', numeric_transformer, numeric_features),('cat', categorical_transformer, categorical_features)])
+            preprocessor = ColumnTransformer(transformers=[('num', numeric_transformer, numeric_features)])
+            X_preprocessed = preprocessor.fit_transform(X)
+            X_train, X_test, y_train, y_test = train_test_split(X_preprocessed, y, test_size=0.1, random_state = 123)
+            X_train = torch.tensor(X_train, dtype=torch.float32)
+            X_test = torch.tensor(X_test, dtype=torch.float32)
+            y_train = torch.tensor(y_train.values, dtype=torch.float32)
+            y_test = torch.tensor(y_test.values, dtype=torch.float32)
+            #import pdb; pdb.set_trace()
         else:
             print("Error: Unknown dataset %s. Aborting." % args.dataset) 
             sys.exit(1)
@@ -176,7 +215,7 @@ def load_features(args):
         y_train_onehot = y_train
         y_train = (2 * y_train - 1)
     else:
-        y_train_onehot = onehot(y_train)
+        y_train_onehot = y_train
     if len(y_train_onehot.size()) == 1:
         y_train_onehot = y_train_onehot.unsqueeze(1)
         

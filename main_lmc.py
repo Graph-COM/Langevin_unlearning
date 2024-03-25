@@ -23,6 +23,9 @@ class Runner():
         elif args.dataset == 'CIFAR10':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.dim_w = 512
+        elif args.dataset == 'ADULT':
+            self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
+            self.dim_w = 6
         # make the norm of x = 1, MNIST naturally satisfys
         self.X_train_norm = self.X_train.norm(dim=1, keepdim=True)
         self.X_train = self.X_train / self.X_train_norm
@@ -57,6 +60,7 @@ class Runner():
         if self.args.paint_utility_s:
             # this is to paint the utilisy - s figure
             num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove
+            create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/')
             accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, self.args.sigma, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/learn_scratch_w.npy', w_list)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_utility_s/acc_scratch_D.npy', accuracy_scratch_D)
@@ -117,6 +121,13 @@ class Runner():
                 accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
+        elif self.args.retrain_noiseless == 1:
+            num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove
+            for num_remove in num_remove_list:
+                create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/retrain_noiseless/')
+                X_train_removed, y_train_removed = self.get_removed_data(num_remove)
+                accuracy_scratch_Dnew, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, self.args.burn_in, 0, None)
+                np.save('./result/LMC/'+str(self.args.dataset)+'/retrain_noiseless/retrain_noiseless'+str(num_remove)+'.npy', accuracy_scratch_Dnew)
         else:
             print('check!')
 
@@ -230,6 +241,7 @@ def main():
     parser.add_argument('--paint_utility_s', type = int, default = 0, help = 'paint the utility - s figure')
     parser.add_argument('--paint_utility_epsilon', type = int, default = 0, help = 'paint utility - epsilon figure')
     parser.add_argument('--paint_unlearning_sigma', type = int, default = 0, help = 'paint unlearning utility - sigma figure')
+    parser.add_argument('--retrain_noiseless', type = int, default = 0, help = 'get the noiseless retrain result')
     args = parser.parse_args()
     print(args)
 

@@ -22,6 +22,9 @@ class Runner():
         elif args.dataset == 'CIFAR10':
             self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
             self.dim_w = 512
+        elif args.dataset == 'ADULT':
+            self.X_train, self.X_test, self.y_train, self.y_train_onehot, self.y_test = load_features(args)
+            self.dim_w = 6
         # make the norm of x = 1, MNIST naturally satisfys
         self.X_train_norm = self.X_train.norm(dim=1, keepdim=True)
         self.X_train = self.X_train / self.X_train_norm
@@ -252,6 +255,7 @@ class Runner():
             baseline_step_size = 2 / (self.L + self.m)
             
             X_train_removed, y_train_removed = self.get_removed_data(1)
+            create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/baseline/')
             baseline_learn_scratch_acc, mean_time, baseline_w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
             np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/baseline_acc_scratch.npy', baseline_learn_scratch_acc)
             print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
@@ -285,23 +289,33 @@ class Runner():
                         sigma_list = [0.1872, 0.094, 0.019, 0.0096, 0.0049, 0.0021] # sigma list for MNIST
                     elif self.args.dataset == 'CIFAR10':
                         sigma_list = [0.2431, 0.122, 0.025, 0.0125, 0.0064, 0.0028] # sigma list for CIFAR10
+                    elif self.args.dataset == 'ADULT':
+                        sigma_list = [0.0515, 0.0257, 0.0052, 0.0027, 0.00134, 0.00058] # sigma list for ADULT
                 elif target_k == 2:
                     if self.args.dataset == 'MNIST':
                         sigma_list = [0.18714501953125, 0.09368591346136476, 0.00018914795795776367, 0.00956726167840576, 0.004888916983032227, 0.0020690927830810547]
                     elif self.args.dataset == 'CIFAR10':
                         sigma_list = [0.24309802246093754, 0.12169189471997069, 0.02457275474243164, 0.00012432862245239257, 0.006353760723266601, 0.002700806646057129]
+                    elif self.args.dataset == 'ADULT':
+                        sigma_list = [0.051195281982421875, 0.025627716064453125, 0.005165451049804688, 0.00260595703125, 0.0013284912109375, 0.000559298095703125]
                 elif target_k == 5:
                     if self.args.dataset == 'MNIST':
                         sigma_list = [0.18709939575195314, 0.09364013709448243, 0.00018869019428894046, 0.009521485311523437, 0.004852295889526367, 0.002032471689575195]
                     elif self.args.dataset == 'CIFAR10':
                         sigma_list = [0.24304327392578123, 0.1216369630797119, 0.024517823102172855, 0.00012377930604980467, 0.006317139629760741, 0.002655030279174805]
+                    elif self.args.dataset == 'ADULT':
+                        sigma_list = [0.051177117614746095, 0.025607291259765623, 0.005145937194824219, 0.0025917010498046874, 0.0013100054931640625, 0.0005409881591796875]
                 else:
                     # for unseen target k, search it here
                     sigma_list = []
                     for epsilon in epsilon_list:
                         sigma_list.append(self.search_k(target_k, epsilon))
                     print(sigma_list)
-
+                
+                lmc_learn_noiseless_acc, _ = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, 0, None, len_list = 1, return_w = False)
+                print('LMc learn noiseless acc: ' + str(np.mean(lmc_learn_noiseless_acc)))
+                print('LMc learn noiseless acc std: ' + str(np.std(lmc_learn_noiseless_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_noiseless.npy', lmc_learn_noiseless_acc)
                 for epsilon, sigma in zip(epsilon_list, sigma_list):
                     print('epsilon: ' + str(epsilon))
                     self.args.sigma = sigma
@@ -318,9 +332,11 @@ class Runner():
                     print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
                     print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
                     np.save('./result/LMC/'+str(self.args.dataset)+'/baseline/'+str(target_k)+'/lmc_acc_unlearn_finetune'+str(epsilon)+'.npy', lmc_unlearn_finetune_acc)
+                
+                
             import pdb; pdb.set_trace()
 
-    def search_k(self, target, epsilon, lower = 1e-3, upper = 0.30):
+    def search_k(self, target, epsilon, lower = 1e-5, upper = 0.30):
         if self.calculate_k_with_sigma(epsilon, lower) < target or self.calculate_k_with_sigma(epsilon, upper) > target:
             print('not good upper lowers')
             return
@@ -547,7 +563,6 @@ def main():
 
     runner = Runner(args)
     runner.get_metadata()
-    
     if args.find_k == 1:
         # here may require to find sigma by hand
         # please use runner.try__() to manually search for better sigma when k = 1
