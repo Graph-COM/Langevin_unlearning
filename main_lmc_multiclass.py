@@ -101,18 +101,22 @@ class Runner():
             epsilon_list = [1]
             
             sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            #sigma_list = [1]
             scratch_acc_list = []
             scratch_unlearn_list = []
             finetune_unlearn_list = []
             epsilon0_list = []
             X_train_removed, y_train_removed = self.get_removed_data(num_remove_list[0])
+            create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/')
             for sigma in sigma_list:
                 K_dict, alpha_dict = self.search_finetune_step(sigma, epsilon_list, num_remove_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/K_dict'+str(sigma)+'.npy', K_dict)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/alpha_dict'+str(sigma)+'.npy', alpha_dict)
                 alpha = alpha_dict[num_remove_list[0]][epsilon_list[0]]
-                epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
-                epsilon0_list.append(epsilon0)
+                DP_epsilon0_expression = lambda alpha_: self.calculate_epsilon0(alpha_, num_remove_list[0], sigma) + math.log(float(1/self.delta)) / (alpha_ - 1)
+                DP_epsilon0 = minimize_scalar(DP_epsilon0_expression, bounds=(1, 10000), method='bounded')
+                #epsilon0 = self.calculate_epsilon0(alpha, num_remove_list[0], sigma)
+                epsilon0_list.append(DP_epsilon0.fun)
                 accuracy_scratch_D, mean_time, w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, sigma, None, len_list = 1, return_w = True)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_learn_scratch_w.npy', w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_scratch_D.npy', accuracy_scratch_D)
@@ -122,6 +126,7 @@ class Runner():
                 accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
             np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
+            print(epsilon0_list)
         elif self.args.retrain_noiseless == 1:
             num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove
             for num_remove in num_remove_list:

@@ -163,6 +163,91 @@ class Runner():
                 
                 
             import pdb; pdb.set_trace()
+    def sequential2(self):
+        num_remove_list = [100]
+        num_remove_per_itr_list = [5, 10, 20]
+        target_epsilon = 1
+        create_nested_folder('./result/LMC/'+str(self.args.dataset)+'/sequential2/')
+        baseline_step_size = 2 / (self.L + self.m)
+
+        baseline_I_factor_list = [1, 1.5, 2]
+
+        for baseline_I_factor in baseline_I_factor_list:
+            # first run the baseline, sequentially delete
+            '''baseline_learn_scratch_acc, mean_time, baseline_w_list = self.get_mean_baseline(self.X_train, self.y_train, baseline_step_size, self.args.burn_in, None, len_list = 1, return_w = True)
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_acc_scratch'+str(baseline_I_factor)+'.npy', baseline_learn_scratch_acc)
+            print('baseline learn scratch acc: ' + str(np.mean(baseline_learn_scratch_acc)))
+            print('baseline learn scratch acc std: ' + str(np.std(baseline_learn_scratch_acc)))'''
+
+            min_I = self.get_baseline_min_I(target_epsilon)
+            print('min I:'+str(min_I))
+
+            term1 = int(min_I * baseline_I_factor)
+            baseline_k_list = []
+            for baseline_step in range(1, num_remove_list[0]+1):
+                X_train_removed, y_train_removed = self.get_removed_data(int((baseline_step)))
+                term2 = self.get_baseline_term2(baseline_step)
+                baseline_k = term1 + term2
+                baseline_k_list.append(baseline_k)
+                print('step:'+str(baseline_step)+'k:'+str(baseline_k))
+                
+                #_, mean_time, baseline_w_list = self.get_mean_baseline(X_train_removed, y_train_removed, baseline_step_size, baseline_k, baseline_w_list, len_list = 1, return_w = True)
+                baseline_sigma = self.calculate_baseline_sigma2(baseline_k, epsilon = target_epsilon)
+                print('baseline sigma: ' + str(baseline_sigma))
+                '''random_noise = np.random.normal(0, baseline_sigma, (100, 1, self.dim_w))
+                baseline_w_list = torch.tensor(baseline_w_list + random_noise).float()
+                baseline_unlearn_finetune_acc_list = []
+                for i in range(100):
+                    accuracy = self.test_accuracy(baseline_w_list[i])
+                    baseline_unlearn_finetune_acc_list.append(accuracy)
+                print('baseline step:'+str(baseline_step)+'acc:'+str(np.mean(baseline_unlearn_finetune_acc_list)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_acc_Ifac_'+str(baseline_I_factor)+'_step_'+str(baseline_step)+'.npy', baseline_unlearn_finetune_acc_list)'''
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/baseline_k_Ifac_'+str(baseline_I_factor)+'.npy', baseline_k_list)
+            print('baseline k:'+str(baseline_k_list))
+        
+        this_sigma = 0.03
+        for num_remove_per_itr in num_remove_per_itr_list:
+            '''lmc_learn_scratch_acc, mean_time, lmc_w_list = self.get_mean_performance(self.X_train, self.y_train, self.args.burn_in, this_sigma, None, len_list = 1, return_w = True)
+            print('LMc learn scratch acc: ' + str(np.mean(lmc_learn_scratch_acc)))
+            print('LMc learn scratch acc std: ' + str(np.std(lmc_learn_scratch_acc)))
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/lmc_acc_scratch'+str(num_remove_per_itr)+'.npy', lmc_learn_scratch_acc)'''
+            num_step = int(num_remove_list[0]/num_remove_per_itr)
+            alpha_list = []
+            self.k_list = np.zeros(num_step+1).astype(int)
+            # first get k for step 1 as warm start
+            k_1 = 1
+            epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
+            min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
+            while min_epsilon_s1_k1.fun > target_epsilon:
+                k_1 = k_1 + 1
+                epsilon_of_s1 = lambda alpha: self.epsilon_s1(alpha, k_1, num_remove_per_itr, this_sigma) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                min_epsilon_s1_k1 = minimize_scalar(epsilon_of_s1, bounds=(2, 100000), method='bounded')
+            # set k_1 in the list
+            self.k_list[1] = k_1
+            alpha_list.append(min_epsilon_s1_k1.x)
+            
+            if num_step > 1:
+                for step in tqdm(range(2,num_step+1)):
+                    # here step start from 1. k_list[0] = 0 always
+                    self.k_list[step] = 1
+                    epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                    min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
+                    while min_epsilon_sstep_kstep.fun > target_epsilon:
+                        self.k_list[step] = self.k_list[step] + 1
+                        epsilon_of_sstep = lambda alpha: self.epsilon_s_with_alpha(alpha, num_remove_per_itr, this_sigma, step) + (math.log(1 / float(self.delta))) / (alpha - 1)
+                        min_epsilon_sstep_kstep = minimize_scalar(epsilon_of_sstep, bounds=(2, 100000), method='bounded')
+            np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/'+'k_list_nr'+str(num_remove_per_itr)+'.npy', self.k_list)
+            print('lmc nr:'+str(num_remove_per_itr)+'k_list:'+str(self.k_list))
+            # accumulate k
+            accumulate_k = np.cumsum(self.k_list)
+            print(accumulate_k)
+            '''for lmc_step, lmc_k in enumerate(self.k_list):
+                X_train_removed, y_train_removed = self.get_removed_data(int((lmc_step+1)*num_remove_per_itr))
+                lmc_unlearn_finetune_acc, mean_time, lmc_w_list = self.get_mean_performance(X_train_removed, y_train_removed, lmc_k, this_sigma, lmc_w_list, len_list = 1, return_w = True)
+                print('LMc unlearn finetune acc: ' + str(np.mean(lmc_unlearn_finetune_acc)))
+                print('LMc unlearn finetune acc std: ' + str(np.std(lmc_unlearn_finetune_acc)))
+                np.save('./result/LMC/'+str(self.args.dataset)+'/sequential2/lmc_acc_finetune_nr'+str(num_remove_per_itr)+'_step'+str(lmc_step)+'.npy', lmc_unlearn_finetune_acc)'''
+
 
     def search_k(self, target, epsilon, lower = 1e-5, upper = 0.30):
         if self.calculate_k_with_sigma(epsilon, lower) < target or self.calculate_k_with_sigma(epsilon, upper) > target:

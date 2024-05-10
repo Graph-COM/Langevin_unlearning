@@ -1,0 +1,625 @@
+Namespace(M=1, burn_in=10000, data_dir='./data', dataset='CIFAR10_MULTI', extractor='raw_feature', find_k=0, finetune_step=50, gaussian_dim=10, gpu=4, lam=1e-06, len_list=10000, num_removes=1000, num_steps=10000, result_dir='./result', run_baseline=1, search_burnin=0, search_burnin_newdata=0, search_finetune=0, sequential2=1, sigma=0.1, train_mode='binary')
+Extracted features not found, loading raw features.
+number training data:50000
+L smooth constant1.05
+m strongly convex:0.049999999999999996
+M lipschitz constant:2
+step size eta:0.9523809523809523
+RDP constant delta:2e-05
+min I:86
+step:1k:117
+baseline sigma: 9.284132358136885e-07
+step:2k:117
+baseline sigma: 9.284132358136885e-07
+step:3k:118
+baseline sigma: 8.440109309743085e-07
+step:4k:118
+baseline sigma: 8.440109309743085e-07
+step:5k:118
+baseline sigma: 8.440109309743085e-07
+step:6k:118
+baseline sigma: 8.440109309743085e-07
+step:7k:118
+baseline sigma: 8.440109309743085e-07
+step:8k:118
+baseline sigma: 8.440109309743085e-07
+step:9k:118
+baseline sigma: 8.440109309743085e-07
+step:10k:118
+baseline sigma: 8.440109309743085e-07
+step:11k:118
+baseline sigma: 8.440109309743085e-07
+step:12k:118
+baseline sigma: 8.440109309743085e-07
+step:13k:118
+baseline sigma: 8.440109309743085e-07
+step:14k:118
+baseline sigma: 8.440109309743085e-07
+step:15k:119
+baseline sigma: 7.672817541247058e-07
+step:16k:119
+baseline sigma: 7.672817541247058e-07
+step:17k:119
+baseline sigma: 7.672817541247058e-07
+step:18k:119
+baseline sigma: 7.672817541247058e-07
+step:19k:119
+baseline sigma: 7.672817541247058e-07
+step:20k:119
+baseline sigma: 7.672817541247058e-07
+step:21k:119
+baseline sigma: 7.672817541247058e-07
+step:22k:119
+baseline sigma: 7.672817541247058e-07
+step:23k:119
+baseline sigma: 7.672817541247058e-07
+step:24k:119
+baseline sigma: 7.672817541247058e-07
+step:25k:119
+baseline sigma: 7.672817541247058e-07
+step:26k:119
+baseline sigma: 7.672817541247058e-07
+step:27k:119
+baseline sigma: 7.672817541247058e-07
+step:28k:119
+baseline sigma: 7.672817541247058e-07
+step:29k:119
+baseline sigma: 7.672817541247058e-07
+step:30k:119
+baseline sigma: 7.672817541247058e-07
+step:31k:119
+baseline sigma: 7.672817541247058e-07
+step:32k:119
+baseline sigma: 7.672817541247058e-07
+step:33k:119
+baseline sigma: 7.672817541247058e-07
+step:34k:119
+baseline sigma: 7.672817541247058e-07
+step:35k:119
+baseline sigma: 7.672817541247058e-07
+step:36k:119
+baseline sigma: 7.672817541247058e-07
+step:37k:119
+baseline sigma: 7.672817541247058e-07
+step:38k:119
+baseline sigma: 7.672817541247058e-07
+step:39k:119
+baseline sigma: 7.672817541247058e-07
+step:40k:119
+baseline sigma: 7.672817541247058e-07
+step:41k:119
+baseline sigma: 7.672817541247058e-07
+step:42k:119
+baseline sigma: 7.672817541247058e-07
+step:43k:119
+baseline sigma: 7.672817541247058e-07
+step:44k:119
+baseline sigma: 7.672817541247058e-07
+step:45k:119
+baseline sigma: 7.672817541247058e-07
+step:46k:119
+baseline sigma: 7.672817541247058e-07
+step:47k:119
+baseline sigma: 7.672817541247058e-07
+step:48k:119
+baseline sigma: 7.672817541247058e-07
+step:49k:119
+baseline sigma: 7.672817541247058e-07
+step:50k:119
+baseline sigma: 7.672817541247058e-07
+step:51k:119
+baseline sigma: 7.672817541247058e-07
+step:52k:119
+baseline sigma: 7.672817541247058e-07
+step:53k:119
+baseline sigma: 7.672817541247058e-07
+step:54k:119
+baseline sigma: 7.672817541247058e-07
+step:55k:119
+baseline sigma: 7.672817541247058e-07
+step:56k:119
+baseline sigma: 7.672817541247058e-07
+step:57k:119
+baseline sigma: 7.672817541247058e-07
+step:58k:119
+baseline sigma: 7.672817541247058e-07
+step:59k:119
+baseline sigma: 7.672817541247058e-07
+step:60k:119
+baseline sigma: 7.672817541247058e-07
+step:61k:119
+baseline sigma: 7.672817541247058e-07
+step:62k:119
+baseline sigma: 7.672817541247058e-07
+step:63k:119
+baseline sigma: 7.672817541247058e-07
+step:64k:119
+baseline sigma: 7.672817541247058e-07
+step:65k:119
+baseline sigma: 7.672817541247058e-07
+step:66k:119
+baseline sigma: 7.672817541247058e-07
+step:67k:119
+baseline sigma: 7.672817541247058e-07
+step:68k:119
+baseline sigma: 7.672817541247058e-07
+step:69k:119
+baseline sigma: 7.672817541247058e-07
+step:70k:119
+baseline sigma: 7.672817541247058e-07
+step:71k:119
+baseline sigma: 7.672817541247058e-07
+step:72k:119
+baseline sigma: 7.672817541247058e-07
+step:73k:119
+baseline sigma: 7.672817541247058e-07
+step:74k:119
+baseline sigma: 7.672817541247058e-07
+step:75k:119
+baseline sigma: 7.672817541247058e-07
+step:76k:119
+baseline sigma: 7.672817541247058e-07
+step:77k:119
+baseline sigma: 7.672817541247058e-07
+step:78k:119
+baseline sigma: 7.672817541247058e-07
+step:79k:119
+baseline sigma: 7.672817541247058e-07
+step:80k:119
+baseline sigma: 7.672817541247058e-07
+step:81k:119
+baseline sigma: 7.672817541247058e-07
+step:82k:119
+baseline sigma: 7.672817541247058e-07
+step:83k:119
+baseline sigma: 7.672817541247058e-07
+step:84k:119
+baseline sigma: 7.672817541247058e-07
+step:85k:119
+baseline sigma: 7.672817541247058e-07
+step:86k:119
+baseline sigma: 7.672817541247058e-07
+step:87k:119
+baseline sigma: 7.672817541247058e-07
+step:88k:119
+baseline sigma: 7.672817541247058e-07
+step:89k:119
+baseline sigma: 7.672817541247058e-07
+step:90k:119
+baseline sigma: 7.672817541247058e-07
+step:91k:119
+baseline sigma: 7.672817541247058e-07
+step:92k:119
+baseline sigma: 7.672817541247058e-07
+step:93k:119
+baseline sigma: 7.672817541247058e-07
+step:94k:119
+baseline sigma: 7.672817541247058e-07
+step:95k:119
+baseline sigma: 7.672817541247058e-07
+step:96k:119
+baseline sigma: 7.672817541247058e-07
+step:97k:119
+baseline sigma: 7.672817541247058e-07
+step:98k:119
+baseline sigma: 7.672817541247058e-07
+step:99k:119
+baseline sigma: 7.672817541247058e-07
+step:100k:119
+baseline sigma: 7.672817541247058e-07
+baseline k:[117, 117, 118, 118, 118, 118, 118, 118, 118, 118, 118, 118, 118, 118, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119, 119]
+min I:86
+step:1k:160
+baseline sigma: 1.541167101921077e-08
+step:2k:160
+baseline sigma: 1.541167101921077e-08
+step:3k:161
+baseline sigma: 1.401060971391113e-08
+step:4k:161
+baseline sigma: 1.401060971391113e-08
+step:5k:161
+baseline sigma: 1.401060971391113e-08
+step:6k:161
+baseline sigma: 1.401060971391113e-08
+step:7k:161
+baseline sigma: 1.401060971391113e-08
+step:8k:161
+baseline sigma: 1.401060971391113e-08
+step:9k:161
+baseline sigma: 1.401060971391113e-08
+step:10k:161
+baseline sigma: 1.401060971391113e-08
+step:11k:161
+baseline sigma: 1.401060971391113e-08
+step:12k:161
+baseline sigma: 1.401060971391113e-08
+step:13k:161
+baseline sigma: 1.401060971391113e-08
+step:14k:161
+baseline sigma: 1.401060971391113e-08
+step:15k:162
+baseline sigma: 1.273691767086698e-08
+step:16k:162
+baseline sigma: 1.273691767086698e-08
+step:17k:162
+baseline sigma: 1.273691767086698e-08
+step:18k:162
+baseline sigma: 1.273691767086698e-08
+step:19k:162
+baseline sigma: 1.273691767086698e-08
+step:20k:162
+baseline sigma: 1.273691767086698e-08
+step:21k:162
+baseline sigma: 1.273691767086698e-08
+step:22k:162
+baseline sigma: 1.273691767086698e-08
+step:23k:162
+baseline sigma: 1.273691767086698e-08
+step:24k:162
+baseline sigma: 1.273691767086698e-08
+step:25k:162
+baseline sigma: 1.273691767086698e-08
+step:26k:162
+baseline sigma: 1.273691767086698e-08
+step:27k:162
+baseline sigma: 1.273691767086698e-08
+step:28k:162
+baseline sigma: 1.273691767086698e-08
+step:29k:162
+baseline sigma: 1.273691767086698e-08
+step:30k:162
+baseline sigma: 1.273691767086698e-08
+step:31k:162
+baseline sigma: 1.273691767086698e-08
+step:32k:162
+baseline sigma: 1.273691767086698e-08
+step:33k:162
+baseline sigma: 1.273691767086698e-08
+step:34k:162
+baseline sigma: 1.273691767086698e-08
+step:35k:162
+baseline sigma: 1.273691767086698e-08
+step:36k:162
+baseline sigma: 1.273691767086698e-08
+step:37k:162
+baseline sigma: 1.273691767086698e-08
+step:38k:162
+baseline sigma: 1.273691767086698e-08
+step:39k:162
+baseline sigma: 1.273691767086698e-08
+step:40k:162
+baseline sigma: 1.273691767086698e-08
+step:41k:162
+baseline sigma: 1.273691767086698e-08
+step:42k:162
+baseline sigma: 1.273691767086698e-08
+step:43k:162
+baseline sigma: 1.273691767086698e-08
+step:44k:162
+baseline sigma: 1.273691767086698e-08
+step:45k:162
+baseline sigma: 1.273691767086698e-08
+step:46k:162
+baseline sigma: 1.273691767086698e-08
+step:47k:162
+baseline sigma: 1.273691767086698e-08
+step:48k:162
+baseline sigma: 1.273691767086698e-08
+step:49k:162
+baseline sigma: 1.273691767086698e-08
+step:50k:162
+baseline sigma: 1.273691767086698e-08
+step:51k:162
+baseline sigma: 1.273691767086698e-08
+step:52k:162
+baseline sigma: 1.273691767086698e-08
+step:53k:162
+baseline sigma: 1.273691767086698e-08
+step:54k:162
+baseline sigma: 1.273691767086698e-08
+step:55k:162
+baseline sigma: 1.273691767086698e-08
+step:56k:162
+baseline sigma: 1.273691767086698e-08
+step:57k:162
+baseline sigma: 1.273691767086698e-08
+step:58k:162
+baseline sigma: 1.273691767086698e-08
+step:59k:162
+baseline sigma: 1.273691767086698e-08
+step:60k:162
+baseline sigma: 1.273691767086698e-08
+step:61k:162
+baseline sigma: 1.273691767086698e-08
+step:62k:162
+baseline sigma: 1.273691767086698e-08
+step:63k:162
+baseline sigma: 1.273691767086698e-08
+step:64k:162
+baseline sigma: 1.273691767086698e-08
+step:65k:162
+baseline sigma: 1.273691767086698e-08
+step:66k:162
+baseline sigma: 1.273691767086698e-08
+step:67k:162
+baseline sigma: 1.273691767086698e-08
+step:68k:162
+baseline sigma: 1.273691767086698e-08
+step:69k:162
+baseline sigma: 1.273691767086698e-08
+step:70k:162
+baseline sigma: 1.273691767086698e-08
+step:71k:162
+baseline sigma: 1.273691767086698e-08
+step:72k:162
+baseline sigma: 1.273691767086698e-08
+step:73k:162
+baseline sigma: 1.273691767086698e-08
+step:74k:162
+baseline sigma: 1.273691767086698e-08
+step:75k:162
+baseline sigma: 1.273691767086698e-08
+step:76k:162
+baseline sigma: 1.273691767086698e-08
+step:77k:162
+baseline sigma: 1.273691767086698e-08
+step:78k:162
+baseline sigma: 1.273691767086698e-08
+step:79k:162
+baseline sigma: 1.273691767086698e-08
+step:80k:162
+baseline sigma: 1.273691767086698e-08
+step:81k:162
+baseline sigma: 1.273691767086698e-08
+step:82k:162
+baseline sigma: 1.273691767086698e-08
+step:83k:162
+baseline sigma: 1.273691767086698e-08
+step:84k:162
+baseline sigma: 1.273691767086698e-08
+step:85k:162
+baseline sigma: 1.273691767086698e-08
+step:86k:162
+baseline sigma: 1.273691767086698e-08
+step:87k:162
+baseline sigma: 1.273691767086698e-08
+step:88k:162
+baseline sigma: 1.273691767086698e-08
+step:89k:162
+baseline sigma: 1.273691767086698e-08
+step:90k:162
+baseline sigma: 1.273691767086698e-08
+step:91k:162
+baseline sigma: 1.273691767086698e-08
+step:92k:162
+baseline sigma: 1.273691767086698e-08
+step:93k:162
+baseline sigma: 1.273691767086698e-08
+step:94k:162
+baseline sigma: 1.273691767086698e-08
+step:95k:162
+baseline sigma: 1.273691767086698e-08
+step:96k:162
+baseline sigma: 1.273691767086698e-08
+step:97k:162
+baseline sigma: 1.273691767086698e-08
+step:98k:162
+baseline sigma: 1.273691767086698e-08
+step:99k:162
+baseline sigma: 1.273691767086698e-08
+step:100k:162
+baseline sigma: 1.273691767086698e-08
+baseline k:[160, 160, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162, 162]
+min I:86
+step:1k:203
+baseline sigma: 2.5583747863798923e-10
+step:2k:203
+baseline sigma: 2.5583747863798923e-10
+step:3k:204
+baseline sigma: 2.3257952595088603e-10
+step:4k:204
+baseline sigma: 2.3257952595088603e-10
+step:5k:204
+baseline sigma: 2.3257952595088603e-10
+step:6k:204
+baseline sigma: 2.3257952595088603e-10
+step:7k:204
+baseline sigma: 2.3257952595088603e-10
+step:8k:204
+baseline sigma: 2.3257952595088603e-10
+step:9k:204
+baseline sigma: 2.3257952595088603e-10
+step:10k:204
+baseline sigma: 2.3257952595088603e-10
+step:11k:204
+baseline sigma: 2.3257952595088603e-10
+step:12k:204
+baseline sigma: 2.3257952595088603e-10
+step:13k:204
+baseline sigma: 2.3257952595088603e-10
+step:14k:204
+baseline sigma: 2.3257952595088603e-10
+step:15k:205
+baseline sigma: 2.1143593261349181e-10
+step:16k:205
+baseline sigma: 2.1143593261349181e-10
+step:17k:205
+baseline sigma: 2.1143593261349181e-10
+step:18k:205
+baseline sigma: 2.1143593261349181e-10
+step:19k:205
+baseline sigma: 2.1143593261349181e-10
+step:20k:205
+baseline sigma: 2.1143593261349181e-10
+step:21k:205
+baseline sigma: 2.1143593261349181e-10
+step:22k:205
+baseline sigma: 2.1143593261349181e-10
+step:23k:205
+baseline sigma: 2.1143593261349181e-10
+step:24k:205
+baseline sigma: 2.1143593261349181e-10
+step:25k:205
+baseline sigma: 2.1143593261349181e-10
+step:26k:205
+baseline sigma: 2.1143593261349181e-10
+step:27k:205
+baseline sigma: 2.1143593261349181e-10
+step:28k:205
+baseline sigma: 2.1143593261349181e-10
+step:29k:205
+baseline sigma: 2.1143593261349181e-10
+step:30k:205
+baseline sigma: 2.1143593261349181e-10
+step:31k:205
+baseline sigma: 2.1143593261349181e-10
+step:32k:205
+baseline sigma: 2.1143593261349181e-10
+step:33k:205
+baseline sigma: 2.1143593261349181e-10
+step:34k:205
+baseline sigma: 2.1143593261349181e-10
+step:35k:205
+baseline sigma: 2.1143593261349181e-10
+step:36k:205
+baseline sigma: 2.1143593261349181e-10
+step:37k:205
+baseline sigma: 2.1143593261349181e-10
+step:38k:205
+baseline sigma: 2.1143593261349181e-10
+step:39k:205
+baseline sigma: 2.1143593261349181e-10
+step:40k:205
+baseline sigma: 2.1143593261349181e-10
+step:41k:205
+baseline sigma: 2.1143593261349181e-10
+step:42k:205
+baseline sigma: 2.1143593261349181e-10
+step:43k:205
+baseline sigma: 2.1143593261349181e-10
+step:44k:205
+baseline sigma: 2.1143593261349181e-10
+step:45k:205
+baseline sigma: 2.1143593261349181e-10
+step:46k:205
+baseline sigma: 2.1143593261349181e-10
+step:47k:205
+baseline sigma: 2.1143593261349181e-10
+step:48k:205
+baseline sigma: 2.1143593261349181e-10
+step:49k:205
+baseline sigma: 2.1143593261349181e-10
+step:50k:205
+baseline sigma: 2.1143593261349181e-10
+step:51k:205
+baseline sigma: 2.1143593261349181e-10
+step:52k:205
+baseline sigma: 2.1143593261349181e-10
+step:53k:205
+baseline sigma: 2.1143593261349181e-10
+step:54k:205
+baseline sigma: 2.1143593261349181e-10
+step:55k:205
+baseline sigma: 2.1143593261349181e-10
+step:56k:205
+baseline sigma: 2.1143593261349181e-10
+step:57k:205
+baseline sigma: 2.1143593261349181e-10
+step:58k:205
+baseline sigma: 2.1143593261349181e-10
+step:59k:205
+baseline sigma: 2.1143593261349181e-10
+step:60k:205
+baseline sigma: 2.1143593261349181e-10
+step:61k:205
+baseline sigma: 2.1143593261349181e-10
+step:62k:205
+baseline sigma: 2.1143593261349181e-10
+step:63k:205
+baseline sigma: 2.1143593261349181e-10
+step:64k:205
+baseline sigma: 2.1143593261349181e-10
+step:65k:205
+baseline sigma: 2.1143593261349181e-10
+step:66k:205
+baseline sigma: 2.1143593261349181e-10
+step:67k:205
+baseline sigma: 2.1143593261349181e-10
+step:68k:205
+baseline sigma: 2.1143593261349181e-10
+step:69k:205
+baseline sigma: 2.1143593261349181e-10
+step:70k:205
+baseline sigma: 2.1143593261349181e-10
+step:71k:205
+baseline sigma: 2.1143593261349181e-10
+step:72k:205
+baseline sigma: 2.1143593261349181e-10
+step:73k:205
+baseline sigma: 2.1143593261349181e-10
+step:74k:205
+baseline sigma: 2.1143593261349181e-10
+step:75k:205
+baseline sigma: 2.1143593261349181e-10
+step:76k:205
+baseline sigma: 2.1143593261349181e-10
+step:77k:205
+baseline sigma: 2.1143593261349181e-10
+step:78k:205
+baseline sigma: 2.1143593261349181e-10
+step:79k:205
+baseline sigma: 2.1143593261349181e-10
+step:80k:205
+baseline sigma: 2.1143593261349181e-10
+step:81k:205
+baseline sigma: 2.1143593261349181e-10
+step:82k:205
+baseline sigma: 2.1143593261349181e-10
+step:83k:205
+baseline sigma: 2.1143593261349181e-10
+step:84k:205
+baseline sigma: 2.1143593261349181e-10
+step:85k:205
+baseline sigma: 2.1143593261349181e-10
+step:86k:205
+baseline sigma: 2.1143593261349181e-10
+step:87k:205
+baseline sigma: 2.1143593261349181e-10
+step:88k:205
+baseline sigma: 2.1143593261349181e-10
+step:89k:205
+baseline sigma: 2.1143593261349181e-10
+step:90k:205
+baseline sigma: 2.1143593261349181e-10
+step:91k:205
+baseline sigma: 2.1143593261349181e-10
+step:92k:205
+baseline sigma: 2.1143593261349181e-10
+step:93k:205
+baseline sigma: 2.1143593261349181e-10
+step:94k:205
+baseline sigma: 2.1143593261349181e-10
+step:95k:205
+baseline sigma: 2.1143593261349181e-10
+step:96k:205
+baseline sigma: 2.1143593261349181e-10
+step:97k:205
+baseline sigma: 2.1143593261349181e-10
+step:98k:205
+baseline sigma: 2.1143593261349181e-10
+step:99k:205
+baseline sigma: 2.1143593261349181e-10
+step:100k:205
+baseline sigma: 2.1143593261349181e-10
+baseline k:[203, 203, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205]
+  0%|          | 0/19 [00:00<?, ?it/s] 11%|█         | 2/19 [00:00<00:01, 13.67it/s] 21%|██        | 4/19 [00:00<00:02,  5.10it/s] 26%|██▋       | 5/19 [00:01<00:03,  3.56it/s] 32%|███▏      | 6/19 [00:01<00:05,  2.57it/s] 37%|███▋      | 7/19 [00:02<00:05,  2.15it/s] 42%|████▏     | 8/19 [00:03<00:05,  1.85it/s] 47%|████▋     | 9/19 [00:04<00:07,  1.42it/s] 53%|█████▎    | 10/19 [00:05<00:07,  1.13it/s] 58%|█████▊    | 11/19 [00:07<00:08,  1.08s/it] 63%|██████▎   | 12/19 [00:08<00:08,  1.22s/it] 68%|██████▊   | 13/19 [00:10<00:08,  1.44s/it] 74%|███████▎  | 14/19 [00:12<00:08,  1.69s/it] 79%|███████▉  | 15/19 [00:15<00:07,  1.93s/it] 84%|████████▍ | 16/19 [00:18<00:06,  2.24s/it] 89%|████████▉ | 17/19 [00:21<00:05,  2.60s/it] 95%|█████████▍| 18/19 [00:25<00:02,  2.88s/it]100%|██████████| 19/19 [00:29<00:00,  3.15s/it]100%|██████████| 19/19 [00:29<00:00,  1.53s/it]
+lmc nr:5k_list:[   0    1    1  225  421  524  623  720  816  912 1006 1102 1195 1290
+ 1383 1476 1569 1662 1754 1845 1937]
+[    0     1     2   227   648  1172  1795  2515  3331  4243  5249  6351
+  7546  8836 10219 11695 13264 14926 16680 18525 20462]
+  0%|          | 0/9 [00:00<?, ?it/s] 11%|█         | 1/9 [00:00<00:01,  4.35it/s] 22%|██▏       | 2/9 [00:00<00:01,  3.79it/s] 33%|███▎      | 3/9 [00:00<00:01,  3.36it/s] 44%|████▍     | 4/9 [00:01<00:01,  2.56it/s] 56%|█████▌    | 5/9 [00:01<00:01,  2.13it/s] 67%|██████▋   | 6/9 [00:02<00:01,  1.75it/s] 78%|███████▊  | 7/9 [00:03<00:01,  1.61it/s] 89%|████████▉ | 8/9 [00:04<00:00,  1.39it/s]100%|██████████| 9/9 [00:05<00:00,  1.21it/s]100%|██████████| 9/9 [00:05<00:00,  1.64it/s]
+lmc nr:10k_list:[   0    1  401  569  665  752  838  927 1017 1108 1200]
+[   0    1  402  971 1636 2388 3226 4153 5170 6278 7478]
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:00<00:01,  2.37it/s] 50%|█████     | 2/4 [00:00<00:00,  2.06it/s] 75%|███████▌  | 3/4 [00:01<00:00,  1.95it/s]100%|██████████| 4/4 [00:02<00:00,  1.76it/s]100%|██████████| 4/4 [00:02<00:00,  1.86it/s]
+lmc nr:20k_list:[  0 391 782 863 927 991]
+[   0  391 1173 2036 2963 3954]

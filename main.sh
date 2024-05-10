@@ -13,6 +13,7 @@
 # paint unlearning utility - sigma figure
 #nohup python -u main_lmc.py --lam 1e-6 --sigma 0.03 --dataset MNIST --paint_unlearning_sigma 1 --gpu 6 >./MNIST_LMC_paint_unlearning_sigma.log 2>&1 </dev/null &
 #nohup python -u main_lmc.py --lam 1e-6 --sigma 0.03 --dataset CIFAR10 --paint_unlearning_sigma 1 --gpu 1 >./CIFAR10_LMC_paint_unlearning_sigma.log 2>&1 </dev/null &
+#nohup python -u main_lmc_multiclass.py --lam 1e-6 --sigma 0.03 --dataset CIFAR10_MULTI --paint_unlearning_sigma 1 --gpu 7 >./CIFAR10_MULTI_LMC_paint_unlearning_sigma.log 2>&1 </dev/null &
 
 # get the utility of noiseless retrain
 #nohup python -u main_lmc.py --lam 1e-6 --sigma 0.03 --dataset MNIST --retrain_noiseless 1 --gpu 2 >./MNIST_LMC_retrain_noiseless.log 2>&1 </dev/null &
