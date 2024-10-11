@@ -1,6 +1,6 @@
 # Langevin_unlearning
 
-This is the official implementation of the paper Langevin Unlearning: A New Perspective of Noisy Gradient Descent for Machine Unlearning.
+This is the official implementation of the **Neurips 2024 Spotlight** paper [Langevin Unlearning: A New Perspective of Noisy Gradient Descent for Machine Unlearning.](https://arxiv.org/abs/2401.10371)
 
 ## Environment requirements
 
