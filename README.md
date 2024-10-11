@@ -37,7 +37,9 @@ The command above could produce satisfying value of $\sigma$ when $k>1$, for $k=
 
 ````
 python baseline.py --lam 1e-6 --dataset [MNIST/CIFAR10] --sequential2 1
+python baseline_multiclass.py --lam 1e-6 --dataset [CIFAR10_MULTI] --sequential2 1
 ````
+Note that CIFAR10_MULTI refers to multiple class classification.
 
 
 
@@ -47,18 +49,20 @@ python baseline.py --lam 1e-6 --dataset [MNIST/CIFAR10] --sequential2 1
 
 ````
 python main_lmc.py --lam 1e-6 --sigma 0.03 --dataset [MNIST/CIFAR10] --paint_unlearning_sigma 1
+python main_lmc_multiclass.py --lam 1e-6 --sigma 0.03 --dataset CIFAR10_MULTI --paint_unlearning_sigma 1
 ````
 
 ## To implement and re-produce the result in Figure 4, run
 
 ````
-python main_lmc.py --lam 1e-6 --sigma 0.03 --dataset [MNIST/CIFAR10] --paint_utility_epsilon 1
+python main_lmc.py --lam 1e-6 --sigma 0.03 --dataset [MNIST] --paint_utility_epsilon 1
 ````
 
 ## To implement and reproduce the result in Figure 5 (Appendix), run
 
 ````
 python main_lmc.py --lam 1e-6 --sigma 0.03 --dataset [MNIST/CIFAR10] --paint_utility_s 1
+python main_lmc_multiclass.py --lam 1e-6 --sigma 0.015 --dataset CIFAR10_MULTI --paint_utility_s 1
 ````
 
 ## To visualize the figures in the paper
