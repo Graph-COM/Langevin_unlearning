@@ -71,4 +71,17 @@ please refer to ./result/LMC/Plotplace.ipynb
 
 * Notes: *use --gpu to allocate to a GPU device*
 
+## Citation 
+
+If you find our work helpful, please cite us:
+```
+@article{chien2024langevin,
+  title={Langevin Unlearning: A New Perspective of Noisy Gradient Descent for Machine Unlearning},
+  author={Chien, Eli and Wang, Haoyu and Chen, Ziang and Li, Pan},
+  journal={Advances in Neural Information Processing Systems (Neurips) 2024},
+  year={2024}
+}
+```
+
+
   
