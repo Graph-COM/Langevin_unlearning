@@ -99,7 +99,8 @@ class Runner():
             num_remove_list = [100]
             epsilon_list = [1]
             
-            sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            #sigma_list = [0.05, 0.1, 0.2, 0.5, 1]
+            sigma_list =[0.01]
             scratch_acc_list = []
             scratch_unlearn_list = []
             finetune_unlearn_list = []
@@ -122,7 +123,7 @@ class Runner():
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_scratch_Dnew.npy', accuracy_scratch_Dnew)
                 accuracy_finetune, mean_time = self.get_mean_performance(X_train_removed, y_train_removed, K_dict[num_remove_list[0]][1], sigma, w_list)
                 np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/'+str(sigma)+'_acc_finetune.npy', accuracy_finetune)
-            np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
+            #np.save('./result/LMC/'+str(self.args.dataset)+'/paint_unlearning_sigma/epsilon0.npy', epsilon0_list)
             print(epsilon0_list)
         elif self.args.retrain_noiseless == 1:
             num_remove_list = [1, 10, 50, 100, 500, 1000] # the number of data to remove

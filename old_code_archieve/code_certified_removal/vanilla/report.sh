@@ -1,1 +1,0 @@
-nohup python -u  test_removal.py --data-dir './data' --verbose --extractor none --dataset MNIST --train-mode binary --std 10 --lam 1e-1 --num-steps 100 >./report.log 2>&1 </dev/null &
