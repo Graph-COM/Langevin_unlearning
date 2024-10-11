@@ -78,7 +78,7 @@ If you find our work helpful, please cite us:
 @article{chien2024langevin,
   title={Langevin Unlearning: A New Perspective of Noisy Gradient Descent for Machine Unlearning},
   author={Chien, Eli and Wang, Haoyu and Chen, Ziang and Li, Pan},
-  journal={Advances in Neural Information Processing Systems (Neurips) 2024},
+  journal={arXiv preprint arXiv:2401.10371},
   year={2024}
 }
 ```
