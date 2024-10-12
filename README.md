@@ -77,7 +77,9 @@ python main_lmc_multiclass.py --lam 1e-6 --sigma 0.015 --dataset CIFAR10_MULTI -
 
 please refer to ./result/LMC/Plotplace.ipynb
 
-* Notes: *use --gpu to allocate to a GPU device*
+## Note
+
+* use --gpu to allocate to a GPU device
 
 * /result/LMC saves the results we run and report in our paper.
 
