@@ -73,10 +73,6 @@ python main_lmc.py --lam 1e-6 --sigma 0.03 --dataset [MNIST/CIFAR10] --paint_uti
 python main_lmc_multiclass.py --lam 1e-6 --sigma 0.015 --dataset CIFAR10_MULTI --paint_utility_s 1
 ````
 
-## To visualize the figures in the paper
-
-please refer to ./result/LMC/Plotplace.ipynb
-
 ## Note
 
 * use --gpu to allocate to a GPU device
