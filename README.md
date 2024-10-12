@@ -79,6 +79,8 @@ please refer to ./result/LMC/Plotplace.ipynb
 
 * Notes: *use --gpu to allocate to a GPU device*
 
+* /result/LMC saves the results we run and report in our paper.
+
 ## Citation 
 
 If you find our work helpful, please cite us:
